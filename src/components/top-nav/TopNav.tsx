@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Wallet, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function TopNav() {
    const [menuOpen, setMenuOpen] = useState(false);
@@ -33,8 +34,13 @@ export default function TopNav() {
          >
             {/* Logo */}
             <Link
-               href={'/'}
-               style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+               href="/"
+               style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textDecoration: 'none',
+               }}
             >
                <div
                   style={{
@@ -48,7 +54,6 @@ export default function TopNav() {
                      fontWeight: 700,
                      fontSize: '16px',
                      color: '#fff',
-                     letterSpacing: '-0.5px',
                   }}
                >
                   N
@@ -95,7 +100,6 @@ export default function TopNav() {
                         }
                      >
                         {item.name}
-                        {/* Active underline dot */}
                         {isActive && (
                            <span
                               style={{
@@ -116,35 +120,14 @@ export default function TopNav() {
                })}
             </div>
 
-            {/* Desktop Connect Wallet Button */}
-            <button
-               className="desktop-nav"
-               style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  letterSpacing: '0.01em',
-                  transition: 'opacity 0.2s ease',
-               }}
-               onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.opacity =
-                     '0.85')
-               }
-               onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.opacity = '1')
-               }
-            >
-               <Wallet size={16} />
-               Connect Wallet
-            </button>
+            {/* Desktop — RainbowKit Connect Button */}
+            <div className="desktop-nav">
+               <ConnectButton
+                  showBalance={true}
+                  chainStatus="icon"
+                  accountStatus="avatar"
+               />
+            </div>
 
             {/* Hamburger (mobile only) */}
             <button
@@ -179,7 +162,7 @@ export default function TopNav() {
             />
          )}
 
-         {/* Mobile Side Drawer */}
+         {/* Mobile Drawer */}
          <div
             style={{
                position: 'fixed',
@@ -235,38 +218,25 @@ export default function TopNav() {
                );
             })}
 
-            <button
-               style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  marginTop: '24px',
-                  padding: '12px 20px',
-                  background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  color: '#fff',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  width: '100%',
-               }}
-            >
-               <Wallet size={16} />
-               Connect Wallet
-            </button>
+            {/* Connect Wallet in drawer */}
+            <div style={{ marginTop: '24px' }}>
+               <ConnectButton
+                  showBalance={true}
+                  chainStatus="none"
+                  accountStatus="address"
+               />
+            </div>
          </div>
 
          <style>{`
-            @media (max-width: 768px) {
-               .desktop-nav { display: none !important; }
-               .mobile-nav { display: flex !important; }
-            }
-            @media (min-width: 769px) {
-               .mobile-nav { display: none !important; }
-            }
-         `}</style>
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .mobile-nav { display: flex !important; }
+        }
+        @media (min-width: 769px) {
+          .mobile-nav { display: none !important; }
+        }
+      `}</style>
       </>
    );
 }

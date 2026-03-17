@@ -11,6 +11,7 @@ import {
    Clock,
    Zap,
 } from 'lucide-react';
+import Link from 'next/link';
 
 const tournaments = [
    {
@@ -205,17 +206,19 @@ export default function TournamentsPage() {
                   </p>
                </div>
 
-               <motion.button
-                  whileHover={{
-                     scale: 1.04,
-                     boxShadow: '0 0 30px rgba(139,92,246,0.6)',
-                  }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] shrink-0 self-start"
-               >
-                  <Plus size={16} />
-                  Create Tournament
-               </motion.button>
+               <Link href={'tournament/create'}>
+                  <motion.button
+                     whileHover={{
+                        scale: 1.04,
+                        boxShadow: '0 0 30px rgba(139,92,246,0.6)',
+                     }}
+                     whileTap={{ scale: 0.97 }}
+                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] shrink-0 self-start cursor-pointer"
+                  >
+                     <Plus size={16} />
+                     Create Tournament
+                  </motion.button>
+               </Link>
             </motion.div>
 
             {/* Search + Filter */}
