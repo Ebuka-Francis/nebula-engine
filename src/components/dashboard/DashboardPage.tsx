@@ -10,58 +10,14 @@ import {
    Plus,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { getPlayerStats } from '@/lib/playerService';
+import { subscribeToPayouts } from '@/lib/payoutService';
+import { subscribeToTournaments } from '@/lib/tournamentService';
+import { Player, Payout, Tournament } from '../../../types';
 
-const stats = [
-   {
-      icon: Trophy,
-      label: 'Tournaments Won',
-      value: '12',
-      color: 'text-cyan-400',
-      bg: 'bg-cyan-400/10 border-cyan-400/20',
-   },
-   {
-      icon: Coins,
-      label: 'Total Earnings',
-      value: '8,450 USDC',
-      color: 'text-purple-400',
-      bg: 'bg-purple-400/10 border-purple-400/20',
-   },
-   {
-      icon: Users,
-      label: 'Tournaments Played',
-      value: '34',
-      color: 'text-blue-400',
-      bg: 'bg-blue-400/10 border-blue-400/20',
-   },
-   {
-      icon: TrendingUp,
-      label: 'Win Rate',
-      value: '35%',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10 border-emerald-400/20',
-   },
-];
-
-const myTournaments = [
-   {
-      name: 'Nebula Grand Prix',
-      meta: '87/100 players • 5,000 USDC',
-      live: true,
-   },
-   {
-      name: 'Diamond Hands Open',
-      meta: '42/64 players • 10,000 USDC',
-      live: false,
-   },
-];
-
-const recentPayouts = [
-   { name: 'Rain Royale #41', time: '2h ago', amount: '+625 USDC' },
-   { name: 'Degen Showdown', time: '1d ago', amount: '+150 USDC' },
-   { name: 'Whale Wars #2', time: '3d ago', amount: '+2,500 USDC' },
-];
-
+// ── Variants ────────────────────────────────────────────
 const statVariants: Variants = {
    hidden: { opacity: 0, y: 28 },
    visible: (i: number) => ({
@@ -98,8 +54,92 @@ const payoutRowVariants: Variants = {
    }),
 };
 
+// ── Helper: format Firestore timestamp to relative time ──
+function timeAgo(timestamp: any): string {
+   if (!timestamp) return '';
+   const date = timestamp.toDate?.() ?? new Date(timestamp);
+   const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+   if (diff < 60) return `${diff}s ago`;
+   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+// ── Empty state component ────────────────────────────────
+function EmptyState({ message }: { message: string }) {
+   return (
+      <div className="flex items-center justify-center py-8">
+         <p className="text-white/20 text-xs">{message}</p>
+      </div>
+   );
+}
+
+// ── Main Component ───────────────────────────────────────
 export default function DashboardPage() {
    const { address, isConnected } = useAccount();
+   const [player, setPlayer] = useState<Player | null>(null);
+   const [payouts, setPayouts] = useState<Payout[]>([]);
+   const [myTournaments, setMyTournaments] = useState<Tournament[]>([]);
+   const [loading, setLoading] = useState(true);
+
+   // Fetch player stats
+   useEffect(() => {
+      if (!address) return;
+      getPlayerStats(address).then((data) => {
+         setPlayer(data);
+         setLoading(false);
+      });
+   }, [address]);
+
+   // Real-time payouts
+   useEffect(() => {
+      if (!address) return;
+      const unsubscribe = subscribeToPayouts(address, setPayouts);
+      return () => unsubscribe();
+   }, [address]);
+
+   // Real-time my tournaments
+   useEffect(() => {
+      if (!address) return;
+      const unsubscribe = subscribeToTournaments((all) => {
+         setMyTournaments(all.filter((t) => t.creatorAddress === address));
+      });
+      return () => unsubscribe();
+   }, [address]);
+
+   // Dynamic stats from live player data
+   const stats = [
+      {
+         icon: Trophy,
+         label: 'Tournaments Won',
+         value: loading ? '—' : String(player?.tournamentsWon ?? 0),
+         color: 'text-cyan-400',
+         bg: 'bg-cyan-400/10 border-cyan-400/20',
+      },
+      {
+         icon: Coins,
+         label: 'Total Earnings',
+         value: loading
+            ? '—'
+            : `${player?.totalEarnings?.toLocaleString() ?? 0} USDC`,
+         color: 'text-purple-400',
+         bg: 'bg-purple-400/10 border-purple-400/20',
+      },
+      {
+         icon: Users,
+         label: 'Tournaments Played',
+         value: loading ? '—' : String(player?.tournamentsPlayed ?? 0),
+         color: 'text-blue-400',
+         bg: 'bg-blue-400/10 border-blue-400/20',
+      },
+      {
+         icon: TrendingUp,
+         label: 'Win Rate',
+         value: loading ? '—' : `${player?.winRate ?? 0}%`,
+         color: 'text-emerald-400',
+         bg: 'bg-emerald-400/10 border-emerald-400/20',
+      },
+   ];
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
@@ -118,21 +158,21 @@ export default function DashboardPage() {
                   <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-1">
                      Dashboard
                   </h1>
-                  <div>
-                     {isConnected ? (
-                        <p className="text-[#6b6b80] text-sm">
-                           Welcome back,{' '}
-                           <span className="text-purple-400/80 font-mono">
-                              {address?.slice(0, 6)}...{address?.slice(-4)}
-                           </span>
-                        </p>
-                     ) : (
-                        <p>Please connect your wallet</p>
-                     )}
-                  </div>
+                  {isConnected ? (
+                     <p className="text-[#6b6b80] text-sm">
+                        Welcome back,{' '}
+                        <span className="text-purple-400/80 font-mono">
+                           {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </span>
+                     </p>
+                  ) : (
+                     <p className="text-[#6b6b80] text-sm">
+                        Please connect your wallet to view your dashboard.
+                     </p>
+                  )}
                </div>
 
-               {/* <Link href="/tournament/create">
+               <Link href="/tournament/create">
                   <motion.button
                      whileHover={{
                         scale: 1.04,
@@ -144,7 +184,7 @@ export default function DashboardPage() {
                      <Plus size={16} />
                      Create Tournament
                   </motion.button>
-               </Link> */}
+               </Link>
             </motion.div>
 
             {/* Stat Cards */}
@@ -159,15 +199,12 @@ export default function DashboardPage() {
                      whileHover={{ y: -4, transition: { duration: 0.2 } }}
                      className="group relative flex flex-col gap-4 p-5 rounded-2xl border border-white/[0.07] bg-white/[0.03] hover:border-purple-500/30 transition-colors duration-300 overflow-hidden cursor-default"
                   >
-                     {/* Hover glow */}
                      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(ellipse_at_top_left,rgba(168,85,247,0.07),transparent_60%)] pointer-events-none" />
-
                      <div
                         className={`w-8 h-8 rounded-lg border flex items-center justify-center ${stat.bg}`}
                      >
                         <stat.icon size={15} className={stat.color} />
                      </div>
-
                      <div>
                         <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-0.5">
                            {stat.value}
@@ -203,36 +240,44 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="p-3 flex flex-col gap-1">
-                     {myTournaments.map((t, i) => (
-                        <motion.div
-                           key={t.name}
-                           custom={i}
-                           variants={rowVariants}
-                           initial="hidden"
-                           animate="visible"
-                           whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                           className="group flex items-center justify-between gap-3 px-3 py-3.5 rounded-xl hover:bg-white/[0.03] transition-colors duration-200 cursor-pointer"
-                        >
-                           <div>
-                              <p className="text-white text-sm font-semibold mb-0.5">
-                                 {t.name}
-                              </p>
-                              <p className="text-white/30 text-xs">{t.meta}</p>
-                           </div>
-
-                           <div className="flex items-center gap-2 shrink-0">
-                              {t.live && (
-                                 <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
-                              )}
-                              <ArrowRight
-                                 size={15}
-                                 className="text-white/20 group-hover:text-purple-400 transition-colors duration-200"
-                              />
-                           </div>
-                        </motion.div>
-                     ))}
-
-                     {/* Empty state padding */}
+                     {myTournaments.length === 0 ? (
+                        <EmptyState message="No tournaments created yet." />
+                     ) : (
+                        myTournaments.slice(0, 5).map((t, i) => (
+                           <Link href={`/tournament/${t.id}`} key={t.id}>
+                              <motion.div
+                                 custom={i}
+                                 variants={rowVariants}
+                                 initial="hidden"
+                                 animate="visible"
+                                 whileHover={{
+                                    x: 4,
+                                    transition: { duration: 0.2 },
+                                 }}
+                                 className="group flex items-center justify-between gap-3 px-3 py-3.5 rounded-xl hover:bg-white/[0.03] transition-colors duration-200 cursor-pointer"
+                              >
+                                 <div>
+                                    <p className="text-white text-sm font-semibold mb-0.5">
+                                       {t.name}
+                                    </p>
+                                    <p className="text-white/30 text-xs">
+                                       {t.currentPlayers}/{t.maxPlayers} players
+                                       • {t.prizePool.toLocaleString()} USDC
+                                    </p>
+                                 </div>
+                                 <div className="flex items-center gap-2 shrink-0">
+                                    {t.status === 'live' && (
+                                       <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
+                                    )}
+                                    <ArrowRight
+                                       size={15}
+                                       className="text-white/20 group-hover:text-purple-400 transition-colors duration-200"
+                                    />
+                                 </div>
+                              </motion.div>
+                           </Link>
+                        ))
+                     )}
                      <div className="h-2" />
                   </div>
                </motion.div>
@@ -255,36 +300,40 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="p-3 flex flex-col gap-1">
-                     {recentPayouts.map((p, i) => (
-                        <motion.div
-                           key={p.name}
-                           custom={i}
-                           variants={payoutRowVariants}
-                           initial="hidden"
-                           animate="visible"
-                           className="flex items-center justify-between gap-3 px-3 py-3.5 rounded-xl hover:bg-white/[0.03] transition-colors duration-200 cursor-default"
-                        >
-                           <div>
-                              <p className="text-white text-sm font-semibold mb-0.5">
-                                 {p.name}
-                              </p>
-                              <p className="text-white/25 text-xs">{p.time}</p>
-                           </div>
-
-                           <motion.span
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{
-                                 delay: 0.4 + i * 0.1,
-                                 duration: 0.35,
-                              }}
-                              className="text-emerald-400 font-black text-sm shrink-0"
+                     {payouts.length === 0 ? (
+                        <EmptyState message="No payouts yet." />
+                     ) : (
+                        payouts.slice(0, 5).map((p, i) => (
+                           <motion.div
+                              key={p.id}
+                              custom={i}
+                              variants={payoutRowVariants}
+                              initial="hidden"
+                              animate="visible"
+                              className="flex items-center justify-between gap-3 px-3 py-3.5 rounded-xl hover:bg-white/[0.03] transition-colors duration-200 cursor-default"
                            >
-                              {p.amount}
-                           </motion.span>
-                        </motion.div>
-                     ))}
-
+                              <div>
+                                 <p className="text-white text-sm font-semibold mb-0.5">
+                                    {p.tournamentName}
+                                 </p>
+                                 <p className="text-white/25 text-xs">
+                                    {timeAgo(p.timestamp)}
+                                 </p>
+                              </div>
+                              <motion.span
+                                 initial={{ opacity: 0, scale: 0.8 }}
+                                 animate={{ opacity: 1, scale: 1 }}
+                                 transition={{
+                                    delay: 0.4 + i * 0.1,
+                                    duration: 0.35,
+                                 }}
+                                 className="text-emerald-400 font-black text-sm shrink-0"
+                              >
+                                 +{p.amount.toLocaleString()} USDC
+                              </motion.span>
+                           </motion.div>
+                        ))
+                     )}
                      <div className="h-2" />
                   </div>
                </motion.div>

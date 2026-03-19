@@ -1,6 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Tournament } from '../../../../types';
 import { motion, Variants } from 'framer-motion';
 import {
    ArrowLeft,
@@ -15,26 +19,33 @@ import {
    Brain,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAccount } from 'wagmi';
 
-const tournament = {
-   name: 'Nebula Grand Prix',
-   status: 'live',
-   creator: '0x1a2b...3c4d',
-   entry: '50 USDC',
-   prizePool: '5,000 USDC',
-   players: '87 / 100',
-   timeLeft: 'Live Now',
+// ── Variants ─────────────────────────────────────────────
+const contentVariants: Variants = {
+   hidden: { opacity: 0, y: 16 },
+   visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: 'easeOut' },
+   },
 };
 
-const leaderboard = [
-   { rank: 1, address: '0x1a2b...3c4d', score: 2450, prize: '2,500 USDC' },
-   { rank: 2, address: '0x5a6F...7g8h', score: 2180, prize: '1,250 USDC' },
-   { rank: 3, address: '0x9i0J...1k21', score: 1950, prize: '625 USDC' },
-   { rank: 4, address: '0x3m4n...5o6p', score: 1720, prize: '312 USDC' },
-   { rank: 5, address: '0x7q8r...9s0t', score: 1580, prize: '156 USDC' },
-   { rank: 6, address: '0xab12...cd34', score: 1420, prize: '78 USDC' },
-   { rank: 7, address: '0xef56...gh78', score: 1310, prize: '39 USDC' },
-   { rank: 8, address: '0xi j98...k112', score: 1200, prize: '20 USDC' },
+const rowVariants: Variants = {
+   hidden: { opacity: 0, x: -24 },
+   visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.4, delay: i * 0.06, ease: 'easeOut' },
+   }),
+};
+
+// ── Tabs ─────────────────────────────────────────────────
+const tabs = [
+   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+   { id: 'rules', label: 'Rules', icon: ScrollText },
+   { id: 'payouts', label: 'Payouts', icon: Coins },
+   { id: 'predictions', label: 'Predictions', icon: Brain },
 ];
 
 const rules = [
@@ -47,93 +58,130 @@ const rules = [
    'Prize payouts are automated — no manual claims needed.',
 ];
 
-const payouts = [
-   { place: '1st Place', pct: '50%', amount: '2,500 USDC' },
-   { place: '2nd Place', pct: '25%', amount: '1,250 USDC' },
-   { place: '3rd Place', pct: '12.5%', amount: '625 USDC' },
-   { place: '4th Place', pct: '6.25%', amount: '312 USDC' },
-   { place: '5th Place', pct: '3.125%', amount: '156 USDC' },
-   { place: '6th–8th Place', pct: '~1.5% each', amount: '~78 USDC' },
-];
+// ── Loading Skeleton ──────────────────────────────────────
+function Skeleton() {
+   return (
+      <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10">
+         <div className="max-w-3xl mx-auto space-y-4">
+            <div className="h-4 w-32 rounded-full bg-white/[0.05] animate-pulse" />
+            <div className="h-40 rounded-2xl bg-white/[0.03] animate-pulse" />
+            <div className="h-10 rounded-xl bg-white/[0.03] animate-pulse" />
+            <div className="h-64 rounded-2xl bg-white/[0.03] animate-pulse" />
+         </div>
+      </div>
+   );
+}
 
-const predictions = [
-   {
-      label: '1st Place Winner',
-      favorite: '0x1a2b...3c4d',
-      odds: '2.1x',
-      pool: '320 USDC',
-   },
-   {
-      label: '2nd Place',
-      favorite: '0x5a6F...7g8h',
-      odds: '3.4x',
-      pool: '180 USDC',
-   },
-   {
-      label: '3rd Place',
-      favorite: '0x9i0J...1k21',
-      odds: '5.0x',
-      pool: '95 USDC',
-   },
-];
-
-const tabs = [
-   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-   { id: 'rules', label: 'Rules', icon: ScrollText },
-   { id: 'payouts', label: 'Payouts', icon: Coins },
-   { id: 'predictions', label: 'Predictions', icon: Brain },
-];
-
-const rowVariants: Variants = {
-   hidden: { opacity: 0, x: -24 },
-   visible: (i: number) => ({
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.4, delay: i * 0.06, ease: 'easeOut' },
-   }),
-};
-
-const contentVariants: Variants = {
-   hidden: { opacity: 0, y: 16 },
-   visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.35, ease: 'easeOut' },
-   },
-};
-
-function RankBadge({ rank }: { rank: number }) {
-   if (rank === 1)
+// ── Status Badge ─────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+   if (status === 'live')
       return (
-         <span className="flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400/15 border border-yellow-400/30">
-            <Crown size={13} className="text-yellow-400" />
+         <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live
          </span>
       );
-   if (rank === 2)
+   if (status === 'ended')
       return (
-         <span className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-400/10 border border-slate-400/20 text-slate-300 text-xs font-black">
-            #2
-         </span>
-      );
-   if (rank === 3)
-      return (
-         <span className="w-7 h-7 flex items-center justify-center rounded-full bg-orange-400/10 border border-orange-400/20 text-orange-300 text-xs font-black">
-            #3
+         <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/30 text-[10px] font-semibold">
+            Ended
          </span>
       );
    return (
-      <span className="w-7 h-7 flex items-center justify-center text-white/25 text-xs font-bold">
-         #{rank}
+      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[10px] font-semibold">
+         <Clock size={10} />
+         Upcoming
       </span>
    );
 }
 
+// ── Main Component ────────────────────────────────────────
 export default function TournamentDetailPage() {
+   const { id } = useParams();
+   const { address, isConnected } = useAccount();
+   const [tournament, setTournament] = useState<Tournament | null>(null);
+   const [loading, setLoading] = useState(true);
+   const [notFound, setNotFound] = useState(false);
    const [activeTab, setActiveTab] = useState('leaderboard');
+   const [joining, setJoining] = useState(false);
+
+   const isCreator = tournament?.creatorAddress === address?.toLowerCase();
+
+   // Real-time tournament listener
+   useEffect(() => {
+      if (!id) return;
+
+      const ref = doc(db, 'tournaments', id as string);
+      const unsubscribe = onSnapshot(ref, (snap) => {
+         if (!snap.exists()) {
+            setNotFound(true);
+         } else {
+            setTournament({ id: snap.id, ...snap.data() } as Tournament);
+         }
+         setLoading(false);
+      });
+
+      return () => unsubscribe();
+   }, [id]);
+
+   const handleJoin = async () => {
+      if (!isConnected) {
+         alert('Please connect your wallet first.');
+         return;
+      }
+      setJoining(true);
+      // TODO: Wire to Rain Protocol escrow + increment currentPlayers
+      setTimeout(() => {
+         setJoining(false);
+         alert('Join tournament flow coming soon!');
+      }, 1500);
+   };
+
+   // ── States ──
+   if (loading) return <Skeleton />;
+
+   if (notFound)
+      return (
+         <div className="min-h-screen bg-[#0d0d0f] flex flex-col items-center justify-center gap-4">
+            <Trophy size={40} className="text-white/10" />
+            <p className="text-white/30 text-sm">Tournament not found.</p>
+            <Link
+               href="/tournament"
+               className="text-purple-400 text-sm hover:text-purple-300 transition-colors"
+            >
+               ← Back to Tournaments
+            </Link>
+         </div>
+      );
+
+   if (!tournament) return null;
+
+   // Derive payout structure from prize pool
+   const payouts = [
+      {
+         place: '1st Place',
+         pct: '50%',
+         amount: `${(tournament.prizePool * 0.5).toLocaleString()} USDC`,
+      },
+      {
+         place: '2nd Place',
+         pct: '25%',
+         amount: `${(tournament.prizePool * 0.25).toLocaleString()} USDC`,
+      },
+      {
+         place: '3rd Place',
+         pct: '12.5%',
+         amount: `${(tournament.prizePool * 0.125).toLocaleString()} USDC`,
+      },
+      {
+         place: '4th–8th Place',
+         pct: '12.5% split',
+         amount: `${(tournament.prizePool * 0.125).toLocaleString()} USDC`,
+      },
+   ];
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
-         {/* Bg glow */}
          <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-700/8 blur-[120px] rounded-full pointer-events-none z-0" />
 
          <div className="relative z-10 max-w-3xl mx-auto">
@@ -159,57 +207,90 @@ export default function TournamentDetailPage() {
                transition={{ duration: 0.5, ease: 'easeOut' }}
                className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 md:p-6 mb-4"
             >
-               {/* Top row */}
                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
                   <div>
                      <div className="flex items-center gap-2.5 flex-wrap mb-1">
                         <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
                            {tournament.name}
                         </h1>
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
-                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                           Live
-                        </span>
+                        <StatusBadge status={tournament.status} />
                      </div>
                      <p className="text-white/30 text-xs">
-                        Poker Tournament &nbsp;•&nbsp; Created by{' '}
-                        <span className="text-purple-400/70">
-                           {tournament.creator}
+                        {tournament.type} &nbsp;•&nbsp; Created by{' '}
+                        <span className="text-purple-400/70 font-mono">
+                           {tournament.creatorAddress.slice(0, 6)}...
+                           {tournament.creatorAddress.slice(-4)}
                         </span>
+                        {isCreator && (
+                           <span className="ml-2 text-purple-400/50 text-[10px] font-semibold uppercase tracking-wider">
+                              (You)
+                           </span>
+                        )}
                      </p>
                   </div>
 
-                  <motion.button
-                     whileHover={{
-                        scale: 1.04,
-                        boxShadow: '0 0 30px rgba(139,92,246,0.6)',
-                     }}
-                     whileTap={{ scale: 0.97 }}
-                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] shrink-0 cursor-pointer"
-                  >
-                     <Plus size={15} />
-                     Join Tournament
-                  </motion.button>
+                  {/* Join / Creator badge */}
+                  {tournament.status !== 'ended' &&
+                     (isCreator ? (
+                        <span className="flex items-center gap-2 px-4 py-2 rounded-xl border border-purple-500/30 text-purple-400 text-xs font-semibold shrink-0">
+                           <Crown size={13} />
+                           Your Tournament
+                        </span>
+                     ) : (
+                        <motion.button
+                           onClick={handleJoin}
+                           disabled={
+                              joining || tournament.status === 'upcoming'
+                           }
+                           whileHover={{
+                              scale: 1.04,
+                              boxShadow: '0 0 30px rgba(139,92,246,0.6)',
+                           }}
+                           whileTap={{ scale: 0.97 }}
+                           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                           {joining ? (
+                              <>
+                                 <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                 Joining...
+                              </>
+                           ) : (
+                              <>
+                                 <Plus size={15} />
+                                 Join Tournament
+                              </>
+                           )}
+                        </motion.button>
+                     ))}
                </div>
 
-               {/* Stats row */}
+               {/* Stats */}
                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                     { icon: Zap, label: 'Entry Fee', value: tournament.entry },
+                     {
+                        icon: Zap,
+                        label: 'Entry Fee',
+                        value: `${tournament.entryFee} USDC`,
+                     },
                      {
                         icon: Trophy,
                         label: 'Prize Pool',
-                        value: tournament.prizePool,
+                        value: `${tournament.prizePool.toLocaleString()} USDC`,
                      },
                      {
                         icon: Users,
                         label: 'Players',
-                        value: tournament.players,
+                        value: `${tournament.currentPlayers} / ${tournament.maxPlayers}`,
                      },
                      {
                         icon: Clock,
-                        label: 'Time Left',
-                        value: tournament.timeLeft,
+                        label: 'Status',
+                        value:
+                           tournament.status === 'live'
+                              ? 'Live Now'
+                              : tournament.status === 'ended'
+                                ? 'Ended'
+                                : 'Upcoming',
                      },
                   ].map((stat) => (
                      <div
@@ -228,6 +309,14 @@ export default function TournamentDetailPage() {
                      </div>
                   ))}
                </div>
+
+               {/* Side betting badge */}
+               {tournament.sideBetting && (
+                  <div className="mt-3 flex items-center gap-1.5 w-fit px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-semibold">
+                     <Zap size={10} />
+                     Side Betting Enabled
+                  </div>
+               )}
             </motion.div>
 
             {/* Tabs */}
@@ -281,7 +370,6 @@ export default function TournamentDetailPage() {
                {/* LEADERBOARD */}
                {activeTab === 'leaderboard' && (
                   <div>
-                     {/* Table header */}
                      <div className="grid grid-cols-[40px_1fr_80px_100px] gap-2 px-5 py-3 border-b border-white/[0.05]">
                         {['RANK', 'PLAYER', 'SCORE', 'PRIZE'].map((h) => (
                            <span
@@ -292,62 +380,60 @@ export default function TournamentDetailPage() {
                            </span>
                         ))}
                      </div>
-                     {leaderboard.map((row, i) => (
-                        <motion.div
-                           key={row.rank}
-                           custom={i}
-                           variants={rowVariants}
-                           initial="hidden"
-                           animate="visible"
-                           className={`grid grid-cols-[40px_1fr_80px_100px] gap-2 items-center px-5 py-3 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors duration-150 ${
-                              row.rank === 1 ? 'bg-yellow-400/[0.03]' : ''
-                           }`}
-                        >
-                           <RankBadge rank={row.rank} />
-                           <span className="text-white/70 text-xs font-mono">
-                              {row.address}
-                           </span>
-                           <span className="text-white text-sm font-semibold">
-                              {row.score}
-                           </span>
-                           <span
-                              className={`text-sm font-bold ${
-                                 row.rank === 1
-                                    ? 'text-yellow-400'
-                                    : row.rank === 2
-                                      ? 'text-slate-300'
-                                      : row.rank === 3
-                                        ? 'text-orange-300'
-                                        : 'text-purple-400'
-                              }`}
-                           >
-                              {row.prize}
-                           </span>
-                        </motion.div>
-                     ))}
+                     {tournament.currentPlayers === 0 ? (
+                        <div className="py-12 text-center text-white/20 text-xs">
+                           No players have joined yet.
+                        </div>
+                     ) : (
+                        <div className="py-12 text-center text-white/20 text-xs">
+                           Leaderboard updates once the game starts.
+                        </div>
+                     )}
                   </div>
                )}
 
                {/* RULES */}
                {activeTab === 'rules' && (
                   <div className="p-5 flex flex-col gap-3">
-                     {rules.map((rule, i) => (
-                        <motion.div
-                           key={i}
-                           custom={i}
-                           variants={rowVariants}
-                           initial="hidden"
-                           animate="visible"
-                           className="flex items-start gap-3"
-                        >
-                           <span className="mt-0.5 w-5 h-5 rounded-full bg-purple-500/15 border border-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-400 shrink-0">
-                              {i + 1}
+                     <div className="flex flex-col gap-1 mb-2">
+                        <div className="flex justify-between text-xs text-white/30 px-1">
+                           <span>Blind Duration</span>
+                           <span className="text-white/60 font-medium">
+                              {tournament.blindDuration}
                            </span>
-                           <p className="text-white/60 text-sm leading-relaxed">
-                              {rule}
-                           </p>
-                        </motion.div>
-                     ))}
+                        </div>
+                        <div className="flex justify-between text-xs text-white/30 px-1">
+                           <span>Starting Stack</span>
+                           <span className="text-white/60 font-medium">
+                              {tournament.startingStack.toLocaleString()} chips
+                           </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-white/30 px-1">
+                           <span>Game Type</span>
+                           <span className="text-white/60 font-medium">
+                              {tournament.type}
+                           </span>
+                        </div>
+                     </div>
+                     <div className="border-t border-white/[0.05] pt-4 flex flex-col gap-3">
+                        {rules.map((rule, i) => (
+                           <motion.div
+                              key={i}
+                              custom={i}
+                              variants={rowVariants}
+                              initial="hidden"
+                              animate="visible"
+                              className="flex items-start gap-3"
+                           >
+                              <span className="mt-0.5 w-5 h-5 rounded-full bg-purple-500/15 border border-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-400 shrink-0">
+                                 {i + 1}
+                              </span>
+                              <p className="text-white/60 text-sm leading-relaxed">
+                                 {rule}
+                              </p>
+                           </motion.div>
+                        ))}
+                     </div>
                   </div>
                )}
 
@@ -364,29 +450,44 @@ export default function TournamentDetailPage() {
                            </span>
                         ))}
                      </div>
-                     {payouts.map((row, i) => (
+                     {tournament.payoutStructure?.map((pct, i) => (
                         <motion.div
-                           key={row.place}
+                           key={i}
                            custom={i}
                            variants={rowVariants}
                            initial="hidden"
                            animate="visible"
-                           className={`grid grid-cols-3 gap-2 items-center px-5 py-3 border-b border-white/[0.03] last:border-0 ${
-                              i === 0 ? 'bg-yellow-400/[0.03]' : ''
-                           }`}
+                           className={`grid grid-cols-3 gap-2 items-center px-5 py-3.5 border-b border-white/[0.03] last:border-0 ${i === 0 ? 'bg-yellow-400/[0.03]' : ''}`}
                         >
                            <span
-                              className={`text-sm font-semibold ${i === 0 ? 'text-yellow-400' : 'text-white/50'}`}
+                              className={`text-sm font-semibold ${
+                                 i === 0
+                                    ? 'text-yellow-400'
+                                    : i === 1
+                                      ? 'text-slate-300'
+                                      : i === 2
+                                        ? 'text-orange-400'
+                                        : 'text-white/50'
+                              }`}
                            >
-                              {row.place}
+                              {i === 0
+                                 ? '🥇 1st'
+                                 : i === 1
+                                   ? '🥈 2nd'
+                                   : i === 2
+                                     ? '🥉 3rd'
+                                     : `${i + 1}th`}{' '}
+                              Place
                            </span>
-                           <span className="text-white/40 text-sm">
-                              {row.pct}
-                           </span>
+                           <span className="text-white/40 text-sm">{pct}%</span>
                            <span
                               className={`text-sm font-bold ${i === 0 ? 'text-yellow-400' : 'text-purple-400'}`}
                            >
-                              {row.amount}
+                              {(
+                                 (tournament.prizePool * pct) /
+                                 100
+                              ).toLocaleString()}{' '}
+                              USDC
                            </span>
                         </motion.div>
                      ))}
@@ -397,45 +498,134 @@ export default function TournamentDetailPage() {
                )}
 
                {/* PREDICTIONS */}
+               {/* PREDICTIONS */}
                {activeTab === 'predictions' && (
-                  <div className="p-5 flex flex-col gap-3">
-                     {predictions.map((pred, i) => (
-                        <motion.div
-                           key={pred.label}
-                           custom={i}
-                           variants={rowVariants}
-                           initial="hidden"
-                           animate="visible"
-                           className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-purple-500/30 transition-colors duration-200"
-                        >
-                           <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">
-                                 {pred.label}
-                              </span>
-                              <span className="text-white text-sm font-mono font-semibold">
-                                 {pred.favorite}
-                              </span>
-                              <span className="text-[10px] text-white/30">
-                                 Pool:{' '}
-                                 <span className="text-purple-400">
-                                    {pred.pool}
-                                 </span>
+                  <div className="p-5">
+                     {!tournament.sideBetting ? (
+                        <div className="text-center py-8 text-white/20 text-xs">
+                           Side betting is not enabled for this tournament.
+                        </div>
+                     ) : (
+                        <div className="flex flex-col gap-4">
+                           {/* Header */}
+                           <div className="flex items-center justify-between">
+                              <div>
+                                 <h3 className="text-white font-bold text-sm">
+                                    Place Your Predictions
+                                 </h3>
+                                 <p className="text-white/30 text-xs mt-0.5">
+                                    Predict who finishes 1st, 2nd or 3rd before
+                                    the tournament ends.
+                                 </p>
+                              </div>
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-semibold">
+                                 <Zap size={10} />
+                                 Open
                               </span>
                            </div>
-                           <div className="flex flex-col items-end gap-2">
-                              <span className="text-cyan-400 font-black text-lg">
-                                 {pred.odds}
-                              </span>
-                              <motion.button
-                                 whileHover={{ scale: 1.04 }}
-                                 whileTap={{ scale: 0.97 }}
-                                 className="px-4 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-semibold hover:bg-purple-600/30 transition-colors duration-200 cursor-pointer"
-                              >
-                                 Place Bet
-                              </motion.button>
-                           </div>
-                        </motion.div>
-                     ))}
+
+                           {/* Prediction Markets */}
+                           {tournament.currentPlayers === 0 ? (
+                              <div className="text-center py-8 text-white/20 text-xs">
+                                 No players have joined yet. Predictions open
+                                 once players join.
+                              </div>
+                           ) : (
+                              <div className="flex flex-col gap-3">
+                                 {[
+                                    {
+                                       label: '🥇 1st Place Winner',
+                                       multiplier: '2.1x',
+                                       color: 'text-yellow-400',
+                                       border: 'border-yellow-400/20',
+                                       bg: 'bg-yellow-400/5',
+                                    },
+                                    {
+                                       label: '🥈 2nd Place',
+                                       multiplier: '3.4x',
+                                       color: 'text-slate-300',
+                                       border: 'border-slate-400/20',
+                                       bg: 'bg-slate-400/5',
+                                    },
+                                    {
+                                       label: '🥉 3rd Place',
+                                       multiplier: '5.0x',
+                                       color: 'text-orange-400',
+                                       border: 'border-orange-400/20',
+                                       bg: 'bg-orange-400/5',
+                                    },
+                                    {
+                                       label: '⚔️ First Elimination',
+                                       multiplier: '1.8x',
+                                       color: 'text-red-400',
+                                       border: 'border-red-400/20',
+                                       bg: 'bg-red-400/5',
+                                    },
+                                 ].map((market, i) => (
+                                    <motion.div
+                                       key={market.label}
+                                       custom={i}
+                                       variants={rowVariants}
+                                       initial="hidden"
+                                       animate="visible"
+                                       className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${market.border} ${market.bg}`}
+                                    >
+                                       <div className="flex flex-col gap-1">
+                                          <span className="text-white text-sm font-semibold">
+                                             {market.label}
+                                          </span>
+                                          <div className="flex items-center gap-2">
+                                             <span className="text-white/30 text-[10px]">
+                                                Multiplier:
+                                             </span>
+                                             <span
+                                                className={`text-sm font-black ${market.color}`}
+                                             >
+                                                {market.multiplier}
+                                             </span>
+                                          </div>
+                                       </div>
+
+                                       {/* Bet input + button */}
+                                       <div className="flex items-center gap-2 shrink-0">
+                                          <input
+                                             type="number"
+                                             placeholder="USDC"
+                                             min="1"
+                                             className="w-20 bg-black/30 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-white/20 focus:outline-none focus:border-purple-500/50 transition-all duration-200"
+                                          />
+                                          <motion.button
+                                             whileHover={{ scale: 1.04 }}
+                                             whileTap={{ scale: 0.97 }}
+                                             onClick={() => {
+                                                if (!isConnected) {
+                                                   alert(
+                                                      'Please connect your wallet to place a bet.',
+                                                   );
+                                                   return;
+                                                }
+                                                // TODO: Wire to Rain Protocol prediction market
+                                                alert(
+                                                   'Prediction betting coming soon via Rain Protocol!',
+                                                );
+                                             }}
+                                             className="px-3 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-semibold hover:bg-purple-600/30 transition-colors duration-200 cursor-pointer whitespace-nowrap"
+                                          >
+                                             Place Bet
+                                          </motion.button>
+                                       </div>
+                                    </motion.div>
+                                 ))}
+
+                                 {/* Info note */}
+                                 <p className="text-[10px] text-white/20 text-center mt-1">
+                                    Predictions powered by Rain Protocol.
+                                    Payouts are automatic.
+                                 </p>
+                              </div>
+                           )}
+                        </div>
+                     )}
                   </div>
                )}
             </motion.div>

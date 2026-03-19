@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
+import Link from 'next/link';
 import {
    Search,
    SlidersHorizontal,
@@ -11,79 +12,9 @@ import {
    Clock,
    Zap,
 } from 'lucide-react';
-import Link from 'next/link';
 
-const tournaments = [
-   {
-      id: 1,
-      name: 'Nebula Grand Prix',
-      type: 'Poker',
-      status: 'live',
-      entry: '50 USDC',
-      prizePool: '5,000 USDC',
-      players: '87/100',
-      starts: 'Live Now',
-      sideBetting: true,
-   },
-   {
-      id: 2,
-      name: 'Rain Royale #42',
-      type: 'Poker',
-      status: 'live',
-      entry: '25 USDC',
-      prizePool: '2,500 USDC',
-      players: '64/100',
-      starts: 'Live Now',
-      sideBetting: true,
-   },
-   {
-      id: 3,
-      name: 'Diamond Hands Open',
-      type: 'Poker',
-      status: 'upcoming',
-      statusLabel: '2h 15m',
-      entry: '100 USDC',
-      prizePool: '10,000 USDC',
-      players: '42/64',
-      starts: '2h 15m',
-      sideBetting: true,
-   },
-   {
-      id: 4,
-      name: 'Degen Showdown',
-      type: 'Poker',
-      status: 'ended',
-      entry: '75 USDC',
-      prizePool: '7,500 USDC',
-      players: '100/100',
-      starts: 'Ended',
-      sideBetting: false,
-   },
-   {
-      id: 5,
-      name: 'DAO Championship',
-      type: 'Poker',
-      status: 'upcoming',
-      statusLabel: '1d 4h',
-      entry: '200 USDC',
-      prizePool: '20,000 USDC',
-      players: '28/128',
-      starts: '1d 4h',
-      sideBetting: true,
-   },
-   {
-      id: 6,
-      name: 'Whale Wars',
-      type: 'Poker',
-      status: 'upcoming',
-      statusLabel: '3d 12h',
-      entry: '500 USDC',
-      prizePool: '50,000 USDC',
-      players: '10/50',
-      starts: '3d 12h',
-      sideBetting: false,
-   },
-];
+import { subscribeToTournaments } from '@/lib/tournamentService';
+import { Tournament } from '../../../types';
 
 const containerVariants: Variants = {
    hidden: {},
@@ -155,7 +86,7 @@ function StatItem({
 }: {
    icon: any;
    label: string;
-   value: string;
+   value: string | number;
 }) {
    return (
       <div className="flex flex-col gap-0.5">
@@ -171,18 +102,57 @@ function StatItem({
 }
 
 export default function TournamentsPage() {
+   const [tournaments, setTournaments] = useState<Tournament[]>([]);
    const [search, setSearch] = useState('');
    const [filter, setFilter] = useState('all');
+   const [loading, setLoading] = useState(true);
+
+   function formatTimestamp(timestamp: any): string {
+      if (!timestamp) return 'TBA';
+      const date = timestamp.toDate?.() ?? new Date(timestamp);
+      const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (diff < 0) {
+         // future date — show actual date
+         return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+         });
+      }
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return `${Math.floor(diff / 86400)}d ago`;
+   }
+
+   useEffect(() => {
+      const unsubscribe = subscribeToTournaments((data) => {
+         setTournaments(data);
+         setLoading(false);
+      });
+      return () => unsubscribe(); // cleanup on unmount
+   }, []);
 
    const filtered = tournaments.filter((t) => {
       const matchSearch = t.name.toLowerCase().includes(search.toLowerCase());
-      const matchFilter =
-         filter === 'all' ||
-         (filter === 'live' && t.status === 'live') ||
-         (filter === 'upcoming' && t.status === 'upcoming') ||
-         (filter === 'ended' && t.status === 'ended');
+      const matchFilter = filter === 'all' || t.status === filter;
       return matchSearch && matchFilter;
    });
+
+   if (loading) {
+      return (
+         <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-24">
+               {[...Array(6)].map((_, i) => (
+                  <div
+                     key={i}
+                     className="h-48 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse"
+                  />
+               ))}
+            </div>
+         </div>
+      );
+   }
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
@@ -277,63 +247,69 @@ export default function TournamentsPage() {
                variants={containerVariants}
             >
                {filtered.map((t, i) => (
-                  <motion.div
-                     key={t.id}
-                     variants={cardVariants(i)}
-                     whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                     className={`group relative flex flex-col gap-4 p-5 rounded-2xl border cursor-pointer transition-colors duration-300 ${
-                        t.status === 'ended'
-                           ? 'border-white/[0.05] bg-white/[0.02] opacity-60'
-                           : 'border-white/[0.07] bg-white/[0.03] hover:border-purple-500/40 hover:bg-purple-500/[0.04]'
-                     }`}
-                  >
-                     {/* Hover glow */}
-                     <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(ellipse_at_top_left,rgba(168,85,247,0.07),transparent_60%)] pointer-events-none" />
+                  <Link href={`/tournament/${t.id}`} key={t.id}>
+                     <motion.div
+                        key={t.id}
+                        variants={cardVariants(i)}
+                        whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                        className={`group relative flex flex-col gap-4 p-5 rounded-2xl border cursor-pointer transition-colors duration-300 ${
+                           t.status === 'ended'
+                              ? 'border-white/[0.05] bg-white/[0.02] opacity-60'
+                              : 'border-white/[0.07] bg-white/[0.03] hover:border-purple-500/40 hover:bg-purple-500/[0.04]'
+                        }`}
+                     >
+                        {/* Hover glow */}
+                        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(ellipse_at_top_left,rgba(168,85,247,0.07),transparent_60%)] pointer-events-none" />
 
-                     {/* Top row */}
-                     <div className="flex items-start justify-between gap-2">
-                        <div>
-                           <h3 className="text-white font-bold text-base leading-tight mb-0.5">
-                              {t.name}
-                           </h3>
-                           <span className="text-white/30 text-xs">
-                              {t.type}
-                           </span>
+                        {/* Top row */}
+                        <div className="flex items-start justify-between gap-2">
+                           <div>
+                              <h3 className="text-white font-bold text-base leading-tight mb-0.5">
+                                 {t.name}
+                              </h3>
+                              <span className="text-white/30 text-xs">
+                                 {t.type}
+                              </span>
+                           </div>
+                           <StatusBadge status={t.status} label={t.status} />
                         </div>
-                        <StatusBadge status={t.status} label={t.statusLabel} />
-                     </div>
 
-                     {/* Stats grid */}
-                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                        <StatItem icon={Zap} label="Entry" value={t.entry} />
-                        <StatItem
-                           icon={Trophy}
-                           label="Prize Pool"
-                           value={t.prizePool}
-                        />
-                        <StatItem
-                           icon={Users}
-                           label="Players"
-                           value={t.players}
-                        />
-                        <StatItem
-                           icon={Clock}
-                           label="Starts"
-                           value={t.starts}
-                        />
-                     </div>
-
-                     {/* Side betting tag */}
-                     {t.sideBetting && (
-                        <div className="flex items-center gap-1.5 w-fit px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-semibold">
-                           <Zap size={10} />
-                           Side Betting Enabled
+                        {/* Stats grid */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                           <StatItem
+                              icon={Zap}
+                              label="Entry"
+                              value={t.entryFee}
+                           />
+                           <StatItem
+                              icon={Trophy}
+                              label="Prize Pool"
+                              value={t.prizePool}
+                           />
+                           <StatItem
+                              icon={Users}
+                              label="Players"
+                              value={t.maxPlayers}
+                           />
+                           <StatItem
+                              icon={Clock}
+                              label="Starts"
+                              value={formatTimestamp(t.startTime)}
+                           />
                         </div>
-                     )}
 
-                     {/* Bottom shimmer on hover */}
-                     <div className="absolute bottom-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-purple-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </motion.div>
+                        {/* Side betting tag */}
+                        {t.sideBetting && (
+                           <div className="flex items-center gap-1.5 w-fit px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-[10px] font-semibold">
+                              <Zap size={10} />
+                              Side Betting Enabled
+                           </div>
+                        )}
+
+                        {/* Bottom shimmer on hover */}
+                        <div className="absolute bottom-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-purple-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                     </motion.div>
+                  </Link>
                ))}
             </motion.div>
 
