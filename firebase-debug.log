@@ -1,0 +1,263 @@
+[debug] [2026-03-20T09:54:29.262Z] ----------------------------------------------------------------------
+[debug] [2026-03-20T09:54:29.266Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init emulators
+[debug] [2026-03-20T09:54:29.267Z] CLI Version:   15.11.0
+[debug] [2026-03-20T09:54:29.267Z] Platform:      win32
+[debug] [2026-03-20T09:54:29.267Z] Node Version:  v24.12.0
+[debug] [2026-03-20T09:54:29.267Z] Time:          Fri Mar 20 2026 10:54:29 GMT+0100 (West Africa Standard Time)
+[debug] [2026-03-20T09:54:29.267Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Hp\Desktop\Projects\nebula-engine
+
+Before we get started, keep in mind:
+
+  * You are initializing within an existing Firebase project directory
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2026-03-20T09:54:34.588Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-20T09:54:34.589Z] > authorizing via signed-in user (nwokefrancis99@gmail.com)
+[debug] [2026-03-20T09:54:34.591Z] Checked if tokens are valid: false, expires at: 1774000252147
+[debug] [2026-03-20T09:54:34.591Z] Checked if tokens are valid: false, expires at: 1774000252147
+[debug] [2026-03-20T09:54:34.591Z] > refreshing access token with scopes: []
+[debug] [2026-03-20T09:54:34.594Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-20T09:54:34.594Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-20T09:54:35.570Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-03-20T09:54:35.570Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-20T09:54:35.580Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine [none]
+[debug] [2026-03-20T09:54:37.217Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine 200
+[debug] [2026-03-20T09:54:37.217Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine {"projectId":"nebula-engine","projectNumber":"530768056152","displayName":"nebula-engine","name":"projects/nebula-engine","resources":{"hostingSite":"nebula-engine"},"state":"ACTIVE","etag":"1_76561c01-b75f-4e19-bf57-5ed5b06d2ef6"}
+[info] i  Using project nebula-engine (nebula-engine) . 
+[info] 
+=== Emulators Setup
+[debug] [2026-03-20T09:55:59.993Z] ----------------------------------------------------------------------
+[debug] [2026-03-20T09:55:59.998Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Hp\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only functions
+[debug] [2026-03-20T09:55:59.998Z] CLI Version:   15.11.0
+[debug] [2026-03-20T09:55:59.999Z] Platform:      win32
+[debug] [2026-03-20T09:55:59.999Z] Node Version:  v24.12.0
+[debug] [2026-03-20T09:55:59.999Z] Time:          Fri Mar 20 2026 10:55:59 GMT+0100 (West Africa Standard Time)
+[debug] [2026-03-20T09:55:59.999Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-20T09:56:01.672Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-03-20T09:56:01.672Z] > authorizing via signed-in user (nwokefrancis99@gmail.com)
+[info] i  emulators: Starting emulators: functions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions"}}
+[debug] [2026-03-20T09:56:01.689Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-03-20T09:56:01.689Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-03-20T09:56:01.696Z] Write emulator hub locator at C:\Users\Hp\AppData\Local\Temp\hub-nebula-engine.json
+[debug] [2026-03-20T09:56:01.717Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-03-20T09:56:01.718Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-03-20T09:56:01.718Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-03-20T09:56:01.718Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2026-03-20T09:56:02.609Z] defaultcredentials: writing to file C:\Users\Hp\AppData\Roaming\firebase\nwokefrancis99_gmail_com_application_default_credentials.json
+[debug] [2026-03-20T09:56:02.611Z] Setting GAC to C:\Users\Hp\AppData\Roaming\firebase\nwokefrancis99_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\Hp\\AppData\\Roaming\\firebase\\nwokefrancis99_gmail_com_application_default_credentials.json"}}
+[debug] [2026-03-20T09:56:02.612Z] Checked if tokens are valid: true, expires at: 1774004074570
+[debug] [2026-03-20T09:56:02.613Z] Checked if tokens are valid: true, expires at: 1774004074570
+[debug] [2026-03-20T09:56:02.614Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine/adminSdkConfig [none]
+[debug] [2026-03-20T09:56:12.715Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine/adminSdkConfig 200
+[debug] [2026-03-20T09:56:12.715Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/nebula-engine/adminSdkConfig {"projectId":"nebula-engine","storageBucket":"nebula-engine.firebasestorage.app"}
+[info] i  functions: Watching "C:\Users\Hp\Desktop\Projects\nebula-engine\functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\" for Cloud Functions..."}}
+[debug] [2026-03-20T09:56:12.772Z] Validating nodejs source
+[debug] [2026-03-20T09:56:18.793Z] > [functions] package.json contents: {
+  "name": "functions",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
+}
+[debug] [2026-03-20T09:56:18.793Z] Building nodejs source
+[debug] [2026-03-20T09:56:18.794Z] Failed to find version of module node: reached end of search path C:\Users\Hp\Desktop\Projects\nebula-engine\functions\node_modules
+[info] +  functions: Using node@24 from host. 
+[debug] [2026-03-20T09:56:18.798Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-03-20T09:56:18.812Z] Found firebase-functions binary at 'C:\Users\Hp\Desktop\Projects\nebula-engine\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8653
+
+[debug] [2026-03-20T09:56:20.309Z] Got response from /__/functions.yaml {"endpoints":{"startGame":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"startGame"},"playerAction":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"playerAction"},"checkTurnTimer":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"every 1 minutes","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetrySeconds":null,"minBackoffSeconds":null,"maxBackoffSeconds":null},"timeZone":null},"entryPoint":"checkTurnTimer"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+[info] +  functions: Loaded functions definitions from source: startGame, playerAction, checkTurnTimer. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: startGame, playerAction, checkTurnTimer."}}
+[info] +  functions[us-central1-startGame]: http function initialized (http://127.0.0.1:5001/nebula-engine/us-central1/startGame). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/nebula-engine/us-central1/startGame)."}}
+[info] +  functions[us-central1-playerAction]: http function initialized (http://127.0.0.1:5001/nebula-engine/us-central1/playerAction). {"metadata":{"emulator":{"name":"functions"},"message":"\u001b[1mhttp\u001b[22m function initialized (http://127.0.0.1:5001/nebula-engine/us-central1/playerAction)."}}
+[info] i  functions[us-central1-checkTurnTimer]: function ignored because the pubsub emulator does not exist or is not running. {"metadata":{"emulator":{"name":"functions"},"message":"function ignored because the pubsub emulator does not exist or is not running."}}
+[debug] [2026-03-20T09:56:24.432Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌───────────┬────────────────┬─────────────────────────────────┐
+│ Emulator  │ Host:Port      │ View in Emulator UI             │
+├───────────┼────────────────┼─────────────────────────────────┤
+│ Functions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+└───────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-03-20T10:34:27.591Z] [work-queue] {"queuedWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:27.580Z"],"queueLength":1,"runningWork":[],"workRunningCount":0}
+[debug] [2026-03-20T10:34:27.615Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:27.580Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:27.625Z] Accepted request OPTIONS /nebula-engine/us-central1/startGame --> us-central1-startGame
+[debug] [2026-03-20T10:34:27.637Z] [functions] Runtime ready! Sending request! {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Runtime ready! Sending request!"}}
+[debug] [2026-03-20T10:34:27.647Z] [functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/ {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/"}}
+[debug] [2026-03-20T10:34:27.777Z] [worker-pool] addWorker(us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] addWorker(us-central1-startGame)"}}
+[debug] [2026-03-20T10:34:27.789Z] [worker-pool] Adding worker with key us-central1-startGame, total=1 {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] Adding worker with key us-central1-startGame, total=1"}}
+[debug] [2026-03-20T10:34:41.978Z] [runtime-status] [11980] Resolved module firebase-admin {"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:41.978Z] [runtime-status] [11980] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:41.987Z] [runtime-status] [11980] Outgoing network have been stubbed. [{"name":"http","status":"mocked"},{"name":"http","status":"mocked"},{"name":"https","status":"mocked"},{"name":"https","status":"mocked"},{"name":"net","status":"mocked"}] {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Outgoing network have been stubbed. [{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"net\",\"status\":\"mocked\"}]"}}
+[debug] [2026-03-20T10:34:41.988Z] [runtime-status] [11980] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:41.989Z] [runtime-status] [11980] Detected firebase-functions v7+, skipping legacy stubs. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Detected firebase-functions v7+, skipping legacy stubs."}}
+[debug] [2026-03-20T10:34:41.989Z] [runtime-status] [11980] Resolved module firebase-admin {"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:42.511Z] [work-queue] {"queuedWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:42.510Z"],"queueLength":1,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:27.580Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:42.514Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:27.580Z","/nebula-engine/us-central1/startGame-2026-03-20T10:34:42.510Z"],"workRunningCount":2}
+[debug] [2026-03-20T10:34:42.514Z] Accepted request OPTIONS /nebula-engine/us-central1/startGame --> us-central1-startGame
+[debug] [2026-03-20T10:34:42.515Z] [functions] Runtime ready! Sending request! {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Runtime ready! Sending request!"}}
+[debug] [2026-03-20T10:34:42.516Z] [functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/ {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/"}}
+[debug] [2026-03-20T10:34:42.604Z] [worker-pool] addWorker(us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] addWorker(us-central1-startGame)"}}
+[debug] [2026-03-20T10:34:42.606Z] [worker-pool] Adding worker with key us-central1-startGame, total=2 {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] Adding worker with key us-central1-startGame, total=2"}}
+[debug] [2026-03-20T10:34:42.716Z] [runtime-status] [11980] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:44.759Z] [runtime-status] [11980] firebase-admin has been stubbed. {"adminResolution":{"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"}} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] firebase-admin has been stubbed. {\"adminResolution\":{\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}}"}}
+[debug] [2026-03-20T10:34:44.805Z] [runtime-status] [11980] initializeApp(DEFAULT) {"storageBucket":"nebula-engine.firebasestorage.app","projectId":"nebula-engine"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] initializeApp(DEFAULT) {\"storageBucket\":\"nebula-engine.firebasestorage.app\",\"projectId\":\"nebula-engine\"}"}}
+[warn] !  functions: The Cloud Firestore emulator is not running, so calls to Firestore will affect production. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"The Cloud Firestore emulator is not running, so calls to Firestore will affect production."}}
+[debug] [2026-03-20T10:34:44.849Z] [runtime-status] [11980] Functions runtime initialized. {"cwd":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions","node_version":"24.12.0"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Functions runtime initialized. {\"cwd\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\",\"node_version\":\"24.12.0\"}"}}
+[debug] [2026-03-20T10:34:44.850Z] [runtime-status] [11980] Listening to port: \\?\pipe\fire_emu_b12c83bbd33528d5 {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [11980] Listening to port: \\\\?\\pipe\\fire_emu_b12c83bbd33528d5"}}
+[debug] [2026-03-20T10:34:44.948Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE"}}
+[debug] [2026-03-20T10:34:44.953Z] [worker-pool] submitRequest(triggerId=us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] submitRequest(triggerId=us-central1-startGame)"}}
+[info] i  functions: Beginning execution of "us-central1-startGame" {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Beginning execution of \"us-central1-startGame\""}}
+[debug] [2026-03-20T10:34:44.966Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: BUSY {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: BUSY"}}
+[debug] [2026-03-20T10:34:45.005Z] Finishing up request with event=pause {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=pause"}}
+[info] i  functions: Finished "us-central1-startGame" in 39.7793ms {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finished \"us-central1-startGame\" in 39.7793ms"}}
+[debug] [2026-03-20T10:34:45.013Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE"}}
+[debug] [2026-03-20T10:34:45.013Z] Finishing up request with event=finish {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=finish"}}
+[debug] [2026-03-20T10:34:45.014Z] Finishing up request with event=close {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=close"}}
+[debug] [2026-03-20T10:34:45.017Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:42.510Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:45.024Z] [work-queue] {"queuedWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:45.024Z"],"queueLength":1,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:42.510Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:45.025Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:42.510Z","/nebula-engine/us-central1/startGame-2026-03-20T10:34:45.024Z"],"workRunningCount":2}
+[debug] [2026-03-20T10:34:45.025Z] Accepted request POST /nebula-engine/us-central1/startGame --> us-central1-startGame
+[debug] [2026-03-20T10:34:45.029Z] [functions] Runtime ready! Sending request! {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Runtime ready! Sending request!"}}
+[debug] [2026-03-20T10:34:45.030Z] [functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/ {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/"}}
+[debug] [2026-03-20T10:34:45.031Z] [worker-pool] submitRequest(triggerId=us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] submitRequest(triggerId=us-central1-startGame)"}}
+[info] i  functions: Beginning execution of "us-central1-startGame" {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Beginning execution of \"us-central1-startGame\""}}
+[debug] [2026-03-20T10:34:45.037Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: BUSY {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: BUSY"}}
+[info] >  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"} {"user":{"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"},"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"\u001b[90m> \u001b[39m {\"verifications\":{\"app\":\"MISSING\",\"auth\":\"VALID\"},\"logging.googleapis.com/labels\":{\"firebase-log-type\":\"callable-request-verification\"},\"severity\":\"DEBUG\",\"message\":\"Callable request verification passed\"}"}}
+[debug] [2026-03-20T10:34:46.649Z] [runtime-status] [9020] Resolved module firebase-admin {"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:46.653Z] [runtime-status] [9020] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:46.653Z] [runtime-status] [9020] Outgoing network have been stubbed. [{"name":"http","status":"mocked"},{"name":"http","status":"mocked"},{"name":"https","status":"mocked"},{"name":"https","status":"mocked"},{"name":"net","status":"mocked"}] {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Outgoing network have been stubbed. [{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"http\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"https\",\"status\":\"mocked\"},{\"name\":\"net\",\"status\":\"mocked\"}]"}}
+[debug] [2026-03-20T10:34:46.678Z] [runtime-status] [9020] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:46.679Z] [runtime-status] [9020] Detected firebase-functions v7+, skipping legacy stubs. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Detected firebase-functions v7+, skipping legacy stubs."}}
+[debug] [2026-03-20T10:34:46.680Z] [runtime-status] [9020] Resolved module firebase-admin {"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Resolved module firebase-admin {\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:46.853Z] [runtime-status] [9020] Resolved module firebase-functions {"declared":true,"installed":true,"version":"7.2.2","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-functions\\lib\\v2\\index.js"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Resolved module firebase-functions {\"declared\":true,\"installed\":true,\"version\":\"7.2.2\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-functions\\\\lib\\\\v2\\\\index.js\"}"}}
+[debug] [2026-03-20T10:34:47.651Z] [runtime-status] [9020] firebase-admin has been stubbed. {"adminResolution":{"declared":true,"installed":true,"version":"13.7.0","resolution":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\node_modules\\firebase-admin\\lib\\index.js"}} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] firebase-admin has been stubbed. {\"adminResolution\":{\"declared\":true,\"installed\":true,\"version\":\"13.7.0\",\"resolution\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\\\\node_modules\\\\firebase-admin\\\\lib\\\\index.js\"}}"}}
+[debug] [2026-03-20T10:34:47.667Z] [runtime-status] [9020] initializeApp(DEFAULT) {"storageBucket":"nebula-engine.firebasestorage.app","projectId":"nebula-engine"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] initializeApp(DEFAULT) {\"storageBucket\":\"nebula-engine.firebasestorage.app\",\"projectId\":\"nebula-engine\"}"}}
+[debug] [2026-03-20T10:34:47.705Z] [runtime-status] [9020] Functions runtime initialized. {"cwd":"C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions","node_version":"24.12.0"} {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Functions runtime initialized. {\"cwd\":\"C:\\\\Users\\\\Hp\\\\Desktop\\\\Projects\\\\nebula-engine\\\\functions\",\"node_version\":\"24.12.0\"}"}}
+[debug] [2026-03-20T10:34:47.706Z] [runtime-status] [9020] Listening to port: \\?\pipe\fire_emu_41608b7dc252dfe3 {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[runtime-status] [9020] Listening to port: \\\\?\\pipe\\fire_emu_41608b7dc252dfe3"}}
+[debug] [2026-03-20T10:34:47.773Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE"}}
+[debug] [2026-03-20T10:34:47.774Z] [worker-pool] submitRequest(triggerId=us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] submitRequest(triggerId=us-central1-startGame)"}}
+[info] i  functions: Beginning execution of "us-central1-startGame" {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Beginning execution of \"us-central1-startGame\""}}
+[debug] [2026-03-20T10:34:47.777Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: BUSY {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: BUSY"}}
+[debug] [2026-03-20T10:34:47.820Z] Finishing up request with event=pause {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=pause"}}
+[info] i  functions: Finished "us-central1-startGame" in 43.972ms {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finished \"us-central1-startGame\" in 43.972ms"}}
+[debug] [2026-03-20T10:34:47.824Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE"}}
+[debug] [2026-03-20T10:34:47.824Z] Finishing up request with event=finish {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=finish"}}
+[debug] [2026-03-20T10:34:47.824Z] Finishing up request with event=close {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=close"}}
+[debug] [2026-03-20T10:34:47.825Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:45.024Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:47.827Z] [work-queue] {"queuedWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:47.827Z"],"queueLength":1,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:45.024Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:47.827Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:45.024Z","/nebula-engine/us-central1/startGame-2026-03-20T10:34:47.827Z"],"workRunningCount":2}
+[debug] [2026-03-20T10:34:47.828Z] Accepted request POST /nebula-engine/us-central1/startGame --> us-central1-startGame
+[debug] [2026-03-20T10:34:47.829Z] [functions] Runtime ready! Sending request! {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Runtime ready! Sending request!"}}
+[debug] [2026-03-20T10:34:47.829Z] [functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/ {"metadata":{"emulator":{"name":"functions"},"message":"[functions] Got req.url=/nebula-engine/us-central1/startGame, mapping to path=/"}}
+[debug] [2026-03-20T10:34:47.830Z] [worker-pool] submitRequest(triggerId=us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] submitRequest(triggerId=us-central1-startGame)"}}
+[info] i  functions: Beginning execution of "us-central1-startGame" {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Beginning execution of \"us-central1-startGame\""}}
+[debug] [2026-03-20T10:34:47.832Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: BUSY {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: BUSY"}}
+[info] >  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"} {"user":{"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"},"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"\u001b[90m> \u001b[39m {\"verifications\":{\"app\":\"MISSING\",\"auth\":\"VALID\"},\"logging.googleapis.com/labels\":{\"firebase-log-type\":\"callable-request-verification\"},\"severity\":\"DEBUG\",\"message\":\"Callable request verification passed\"}"}}
+[warn] !  Google API requested!
+   - URL: "https://oauth2.googleapis.com/token"
+   - Be careful, this may be a production service. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Google API requested!\n   - URL: \"https://oauth2.googleapis.com/token\"\n   - Be careful, this may be a production service."}}
+[warn] !  Google API requested!
+   - URL: "https://oauth2.googleapis.com/token"
+   - Be careful, this may be a production service. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Google API requested!\n   - URL: \"https://oauth2.googleapis.com/token\"\n   - Be careful, this may be a production service."}}
+[debug] [2026-03-20T10:34:51.963Z] Finishing up request with event=pause {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=pause"}}
+[info] i  functions: Finished "us-central1-startGame" in 6927.1108ms {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finished \"us-central1-startGame\" in 6927.1108ms"}}
+[debug] [2026-03-20T10:34:51.968Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: IDLE"}}
+[debug] [2026-03-20T10:34:51.969Z] Finishing up request with event=finish {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=finish"}}
+[debug] [2026-03-20T10:34:51.970Z] Finishing up request with event=close {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=close"}}
+[debug] [2026-03-20T10:34:51.970Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":["/nebula-engine/us-central1/startGame-2026-03-20T10:34:47.827Z"],"workRunningCount":1}
+[debug] [2026-03-20T10:34:51.989Z] Finishing up request with event=pause {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=pause"}}
+[info] i  functions: Finished "us-central1-startGame" in 4157.22ms {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finished \"us-central1-startGame\" in 4157.22ms"}}
+[debug] [2026-03-20T10:34:51.991Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: IDLE"}}
+[debug] [2026-03-20T10:34:51.991Z] Finishing up request with event=finish {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=finish"}}
+[debug] [2026-03-20T10:34:51.992Z] Finishing up request with event=close {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"Finishing up request with event=close"}}
+[debug] [2026-03-20T10:34:51.992Z] [work-queue] {"queuedWork":[],"queueLength":0,"runningWork":[],"workRunningCount":0}
+[debug] [2026-03-20T10:39:49.383Z] File C:\Users\Hp\Desktop\Projects\nebula-engine\functions\src\index.ts changed, reloading triggers {"metadata":{"emulator":{"name":"functions"},"message":"File C:\\Users\\Hp\\Desktop\\Projects\\nebula-engine\\functions\\src\\index.ts changed, reloading triggers"}}
+[debug] [2026-03-20T10:39:50.408Z] Validating nodejs source
+[debug] [2026-03-20T10:39:57.030Z] > [functions] package.json contents: {
+  "name": "functions",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "24"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
+}
+[debug] [2026-03-20T10:39:57.031Z] Building nodejs source
+[debug] [2026-03-20T10:39:57.032Z] Failed to find version of module node: reached end of search path C:\Users\Hp\Desktop\Projects\nebula-engine\functions\node_modules
+[info] +  functions: Using node@24 from host. 
+[debug] [2026-03-20T10:39:57.044Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-03-20T10:39:57.097Z] Found firebase-functions binary at 'C:\Users\Hp\Desktop\Projects\nebula-engine\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8653
+
+[debug] [2026-03-20T10:40:00.261Z] Got response from /__/functions.yaml {"endpoints":{"startGame":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"startGame"},"playerAction":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"callableTrigger":{},"entryPoint":"playerAction"},"checkTurnTimer":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"every 1 minutes","retryConfig":{"retryCount":null,"maxDoublings":null,"maxRetrySeconds":null,"minBackoffSeconds":null,"maxBackoffSeconds":null},"timeZone":null},"entryPoint":"checkTurnTimer"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+[info] +  functions: Loaded functions definitions from source: startGame, playerAction, checkTurnTimer. {"metadata":{"emulator":{"name":"functions"},"message":"Loaded functions definitions from source: startGame, playerAction, checkTurnTimer."}}
+[debug] [2026-03-20T10:40:04.367Z] [worker-pool] Shutting down IDLE worker (us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] Shutting down IDLE worker (us-central1-startGame)"}}
+[debug] [2026-03-20T10:40:04.367Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: FINISHING {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: FINISHING"}}
+[debug] [2026-03-20T10:40:04.367Z] [worker-pool] Shutting down IDLE worker (us-central1-startGame) {"metadata":{"emulator":{"name":"functions"},"message":"[worker-pool] Shutting down IDLE worker (us-central1-startGame)"}}
+[debug] [2026-03-20T10:40:04.368Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: FINISHING {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: FINISHING"}}
+[debug] [2026-03-20T10:40:04.386Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: exited {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: exited"}}
+[debug] [2026-03-20T10:40:04.387Z] [worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: FINISHED {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-d697c19e-ddd3-4b61-a035-f174ad3d9527]: FINISHED"}}
+[debug] [2026-03-20T10:40:04.389Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: exited {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: exited"}}
+[debug] [2026-03-20T10:40:04.389Z] [worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: FINISHED {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-startGame"},"extension":{},"message":"[worker-us-central1-startGame-0cafc15d-a9f1-44d8-b8a5-ac5b38f5ec7b]: FINISHED"}}

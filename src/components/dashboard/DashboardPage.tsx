@@ -17,6 +17,9 @@ import { subscribeToPayouts } from '@/lib/payoutService';
 import { subscribeToTournaments } from '@/lib/tournamentService';
 import { Player, Payout, Tournament } from '../../../types';
 
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+
 // ── Variants ────────────────────────────────────────────
 const statVariants: Variants = {
    hidden: { opacity: 0, y: 28 },
@@ -81,6 +84,16 @@ export default function DashboardPage() {
    const [payouts, setPayouts] = useState<Payout[]>([]);
    const [myTournaments, setMyTournaments] = useState<Tournament[]>([]);
    const [loading, setLoading] = useState(true);
+
+   const handleTest = async () => {
+      try {
+         const startGame = httpsCallable(functions, 'startGame');
+         const result = await startGame({ tournamentId: 'test-123' });
+         console.log('Function result:', result);
+      } catch (err: any) {
+         console.log('Function error (expected):', err.message);
+      }
+   };
 
    // Fetch player stats
    useEffect(() => {
@@ -337,6 +350,12 @@ export default function DashboardPage() {
                      <div className="h-2" />
                   </div>
                </motion.div>
+               <button
+                  onClick={handleTest}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm"
+               >
+                  Test Function
+               </button>
             </div>
          </div>
       </div>
