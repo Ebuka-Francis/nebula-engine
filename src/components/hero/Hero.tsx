@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 export default function HeroSection() {
    const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -230,7 +231,8 @@ export default function HeroSection() {
                   marginBottom: '56px',
                }}
             >
-               <button
+               <Link
+                  href={'/tournament'}
                   style={{
                      padding: '12px 28px',
                      background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
@@ -255,9 +257,10 @@ export default function HeroSection() {
                   }}
                >
                   Launch Tournament →
-               </button>
+               </Link>
 
-               <button
+               <Link
+                  href={'/tournament'}
                   style={{
                      padding: '12px 28px',
                      background: 'transparent',
@@ -281,7 +284,7 @@ export default function HeroSection() {
                   }}
                >
                   Browse Tournaments
-               </button>
+               </Link>
             </div>
 
             {/* Stats */}
