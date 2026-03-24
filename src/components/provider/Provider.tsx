@@ -15,7 +15,7 @@ const queryClient = new QueryClient();
 function WalletSync({ children }: { children: React.ReactNode }) {
    const { address } = useAccount();
    const { needsUsername, setNeedsUsername } = useWalletSync();
-   useFirebaseAuth();
+   useFirebaseAuth(); // ← now just does anonymous sign in, no signature needed
 
    return (
       <>

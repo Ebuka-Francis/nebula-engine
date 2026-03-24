@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, Variants } from 'framer-motion';
+import Link from 'next/link';
 
 const comicPanels = [
    {
@@ -155,21 +156,23 @@ export default function CTASection() {
                      decentralized tournaments.
                   </motion.p>
 
-                  <motion.button
-                     custom={2}
-                     variants={textVariants}
-                     initial="hidden"
-                     whileInView="visible"
-                     viewport={{ once: true }}
-                     whileHover={{
-                        scale: 1.05,
-                        boxShadow: '0 0 40px rgba(139,92,246,0.7)',
-                     }}
-                     whileTap={{ scale: 0.97 }}
-                     className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm tracking-wide shadow-[0_0_24px_rgba(139,92,246,0.4)] transition-shadow duration-200"
-                  >
-                     Get Started →
-                  </motion.button>
+                  <Link href="/tournament">
+                     <motion.button
+                        custom={2}
+                        variants={textVariants}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        whileHover={{
+                           scale: 1.05,
+                           boxShadow: '0 0 40px rgba(139,92,246,0.7)',
+                        }}
+                        whileTap={{ scale: 0.97 }}
+                        className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-sm tracking-wide shadow-[0_0_24px_rgba(139,92,246,0.4)] transition-shadow duration-200"
+                     >
+                        Get Started →
+                     </motion.button>
+                  </Link>
                </div>
 
                {/* Right — Comic Panels */}

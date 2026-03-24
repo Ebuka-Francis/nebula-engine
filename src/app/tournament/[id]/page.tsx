@@ -33,6 +33,7 @@ import RulesTab from '@/components/tournaments/tabs/RulesTab';
 import PayoutsTab from '@/components/tournaments/tabs/PayoutsTab';
 import PredictionsTab from '@/components/tournaments/tabs/PredictionsTab';
 import PlayTab from '@/components/tournaments/tabs/PlayTab';
+import { useEscrow } from '@/hooks/useEscrow';
 
 interface Tab {
    id: string;
@@ -95,6 +96,9 @@ function StatusBadge({ status }: { status: string }) {
 export default function TournamentDetailPage() {
    const { id } = useParams();
    const { address, isConnected } = useAccount();
+
+   const { joinTournamentOnChain } = useEscrow();
+
    const [tournament, setTournament] = useState<Tournament | null>(null);
    const [loading, setLoading] = useState(true);
    const [notFound, setNotFound] = useState(false);
@@ -143,18 +147,22 @@ export default function TournamentDetailPage() {
          setJoinError('Please connect your wallet first.');
          return;
       }
-      if (!auth.currentUser) {
-         setJoinError('Please wait for authentication to complete.');
-         return;
-      }
+
+      // ✅ Just check wallet is connected — no Firebase auth check needed
       setJoining(true);
       setJoinError('');
+
       try {
          const player = await getPlayerStats(address.toLowerCase());
          if (!player?.username) {
             setJoinError('Please set a username first.');
             return;
          }
+
+         if (tournament!.entryFee > 0) {
+            await joinTournamentOnChain(tournament!.id, tournament!.entryFee);
+         }
+
          await joinTournament(
             tournament!.id,
             address.toLowerCase(),

@@ -20,10 +20,12 @@ import { Timestamp } from 'firebase/firestore';
 import { createTournament } from '@/lib/tournamentService';
 import { auth } from '@/lib/firebase';
 import { TournamentStatus } from '../../../types';
+import { useEscrow } from '@/hooks/useEscrow';
 
 export default function CreateTournamentPage() {
    const { address, isConnected } = useAccount();
    const router = useRouter();
+   const { createTournamentOnChain } = useEscrow();
 
    const [name, setName] = useState('');
    const [entry, setEntry] = useState('50');
@@ -66,12 +68,14 @@ export default function CreateTournamentPage() {
          setError('Please connect your wallet first.');
          return;
       }
+
+      // ✅ Removed Firebase auth check — wallet connection is enough
       if (!name.trim()) {
          setError('Please enter a tournament name.');
          return;
       }
       if (totalPct !== 100) {
-         setError('Payout percentages must add up to exactly 100%.');
+         setError('Payout percentages must add up to 100%.');
          return;
       }
 
@@ -79,12 +83,12 @@ export default function CreateTournamentPage() {
       setError('');
 
       try {
-         await createTournament({
+         const tournamentId = await createTournament({
             name,
             type: gameType,
             status: 'upcoming' as TournamentStatus,
             entryFee: Number(entry),
-            prizePool: Number(prizePool), // 👈 manual prize pool
+            prizePool: Number(prizePool),
             maxPlayers: Number(maxPlayers),
             startTime: Timestamp.fromDate(new Date()),
             creatorAddress: address.toLowerCase(),
@@ -93,13 +97,13 @@ export default function CreateTournamentPage() {
             startingStack: Number(
                startingStack.replace(/,/g, '').split(' ')[0],
             ),
-            payoutStructure: payoutPlaces, // 👈 save payout structure
+            payoutStructure: payoutPlaces,
          });
 
          router.push('/tournament');
       } catch (err: any) {
          console.error(err);
-         setError(err.message ?? 'Something went wrong. Please try again.');
+         setError(err.message ?? 'Something went wrong.');
       } finally {
          setLoading(false);
       }
