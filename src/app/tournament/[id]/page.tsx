@@ -27,6 +27,7 @@ import {
 import { joinTournament, startGame } from '@/lib/gameService';
 import { getPlayerStats } from '@/lib/playerService';
 import { useWalletSync } from '@/hooks/useWalletSync';
+import { getAddress } from 'viem';
 
 // Tab components
 import LeaderboardTab from '@/components/tournaments/tabs/LeaderboardTab';
@@ -151,12 +152,6 @@ export default function TournamentDetailPage() {
          return;
       }
 
-      if (needsUsername === false) {
-         console.log('✅ should show modal now');
-         setShowUsernameModal(true);
-         return;
-      }
-      // ✅ Just check wallet is connected — no Firebase auth check needed
       setJoining(true);
       setJoinError('');
 
@@ -167,10 +162,12 @@ export default function TournamentDetailPage() {
             return;
          }
 
-         if (tournament!.entryFee > 0) {
-            await joinTournamentOnChain(tournament!.id, tournament!.entryFee);
-         }
+         // ✅ Only call on-chain if contract is deployed
+         //  if (tournament!.entryFee > 0 && ESCROW_CONTRACT_ADDRESS !== '0x...') {
+         //    await joinTournamentOnChain(tournament!.id, tournament!.entryFee);
+         //  }
 
+         // Save to Firestore regardless
          await joinTournament(
             tournament!.id,
             address.toLowerCase(),
@@ -178,6 +175,7 @@ export default function TournamentDetailPage() {
          );
          setJoined(true);
       } catch (err: any) {
+         console.error('Full join error:', err);
          setJoinError(err.message ?? 'Failed to join tournament.');
       } finally {
          setJoining(false);
@@ -213,7 +211,7 @@ export default function TournamentDetailPage() {
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
-         {showUsernameModal && (
+         {/* {showUsernameModal && (
             <UsernameModal
                address={address!}
                onComplete={async () => {
@@ -223,7 +221,7 @@ export default function TournamentDetailPage() {
                }}
                onClose={() => setShowUsernameModal(false)}
             />
-         )}
+         )} */}
          <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-700/8 blur-[120px] rounded-full pointer-events-none z-0" />
 
          <div className="relative z-10 max-w-3xl mx-auto">
@@ -271,10 +269,10 @@ export default function TournamentDetailPage() {
                      </p>
                   </div>
 
-                  {/* Join / Start / Joined */}
                   {tournament.status !== 'ended' && (
                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        {isCreator ? (
+                        {/* Creator sees Start Game button */}
+                        {isCreator && (
                            <motion.button
                               onClick={handleStartGame}
                               disabled={
@@ -301,15 +299,20 @@ export default function TournamentDetailPage() {
                                  </>
                               )}
                            </motion.button>
-                        ) : joined ? (
+                        )}
+
+                        {/* ✅ Everyone including creator can join */}
+                        {joined ? (
                            <div className="flex flex-col items-end gap-1">
                               <span className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold">
                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                                  Joined
                               </span>
-                              <span className="text-white/25 text-[10px]">
-                                 Waiting for host to start...
-                              </span>
+                              {!isCreator && (
+                                 <span className="text-white/25 text-[10px]">
+                                    Waiting for host to start...
+                                 </span>
+                              )}
                            </div>
                         ) : (
                            <motion.button
@@ -335,6 +338,7 @@ export default function TournamentDetailPage() {
                               )}
                            </motion.button>
                         )}
+
                         {joinError && (
                            <motion.p
                               initial={{ opacity: 0, y: -4 }}

@@ -2,7 +2,11 @@ import { getContract, parseUnits, formatUnits } from 'viem';
 import { useWalletClient, usePublicClient } from 'wagmi';
 
 // Replace with your deployed contract address
-export const ESCROW_CONTRACT_ADDRESS = '0x...' as `0x${string}`;
+// Replace placeholder with empty string for now
+export const ESCROW_CONTRACT_ADDRESS = (process.env
+   .NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS ?? '') as `0x${string}`;
+
+export const isContractDeployed = ESCROW_CONTRACT_ADDRESS.length === 42;
 
 // USDC contract address (Polygon mainnet)
 export const USDC_ADDRESS =

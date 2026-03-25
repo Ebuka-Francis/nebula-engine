@@ -8,6 +8,7 @@ import {
    USDC_ABI,
    toUSDC,
 } from '@/lib/escrow';
+import { getAddress } from 'viem';
 
 export function useEscrow() {
    const { data: walletClient } = useWalletClient();
@@ -64,15 +65,20 @@ export function useEscrow() {
       tournamentId: string,
       entryFee: number,
    ) => {
-      if (!walletClient) throw new Error('Wallet not connected');
+      if (!walletClient || !address) throw new Error('Wallet not connected');
 
-      // Approve entry fee first
       if (entryFee > 0) {
-         await approveUSDC(entryFee);
+         // ✅ Checksum the escrow address
+         await walletClient.writeContract({
+            address: getAddress(ESCROW_CONTRACT_ADDRESS), // 👈 used here
+            abi: USDC_ABI,
+            functionName: 'approve',
+            args: [getAddress(ESCROW_CONTRACT_ADDRESS), toUSDC(entryFee)], // 👈 and here
+         });
       }
 
       const hash = await walletClient.writeContract({
-         address: ESCROW_CONTRACT_ADDRESS,
+         address: getAddress(ESCROW_CONTRACT_ADDRESS), // 👈 and here
          abi: ESCROW_ABI,
          functionName: 'joinTournament',
          args: [tournamentId],
@@ -122,7 +128,7 @@ export function useEscrow() {
          address: ESCROW_CONTRACT_ADDRESS,
          abi: ESCROW_ABI,
          functionName: 'hasPlayerJoined',
-         args: [tournamentId, playerAddress as `0x${string}`],
+         args: [tournamentId, getAddress(playerAddress) as `0x${string}`],
       });
    };
 
