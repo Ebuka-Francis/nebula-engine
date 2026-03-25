@@ -43,13 +43,44 @@ export async function getPlayerStats(address: string): Promise<Player | null> {
    return playerSnap.data() as Player;
 }
 
+export async function getPlayer(address: string): Promise<Player | null> {
+   const playerRef = doc(db, 'players', address.toLowerCase());
+   const snap = await getDoc(playerRef);
+   return snap.exists() ? (snap.data() as Player) : null;
+}
+
 // Update username
 export async function setUsername(
    address: string,
    username: string,
 ): Promise<void> {
+   const normalizedAddress = address.toLowerCase(); // normalize once
+   const playerRef = doc(db, 'players', normalizedAddress); // use lowercase as doc ID
+   await setDoc(
+      playerRef,
+      {
+         address: normalizedAddress,
+         username: username.toLowerCase().trim(),
+         tournamentsWon: 0,
+         tournamentsPlayed: 0,
+         totalEarnings: 0,
+         winRate: 0,
+         joinedAt: serverTimestamp(),
+      },
+      { merge: true },
+   );
+}
+
+export async function createPlayerIfNotExists(address: string): Promise<void> {
    const playerRef = doc(db, 'players', address);
-   await updateDoc(playerRef, { username: username.toLowerCase().trim() });
+   await setDoc(
+      playerRef,
+      {
+         address: address.toLowerCase(),
+         createdAt: serverTimestamp(),
+      },
+      { merge: true },
+   ); // merge so existing data is not overwritten
 }
 
 // Check if username is already taken

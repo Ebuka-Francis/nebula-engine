@@ -21,12 +21,16 @@ import { createTournament } from '@/lib/tournamentService';
 import { auth } from '@/lib/firebase';
 import { TournamentStatus } from '../../../types';
 import { useEscrow } from '@/hooks/useEscrow';
+import { useWalletSync } from '@/hooks/useWalletSync';
+import UsernameModal from '../modals/UsernameModal';
 
 export default function CreateTournamentPage() {
    const { address, isConnected } = useAccount();
    const router = useRouter();
    const { createTournamentOnChain } = useEscrow();
+   const { needsUsername, setNeedsUsername } = useWalletSync();
 
+   const [showUsernameModal, setShowUsernameModal] = useState(false);
    const [name, setName] = useState('');
    const [entry, setEntry] = useState('50');
    const [maxPlayers, setMaxPlayers] = useState('100');
@@ -69,7 +73,12 @@ export default function CreateTournamentPage() {
          return;
       }
 
-      // ✅ Removed Firebase auth check — wallet connection is enough
+      // ✅ Show modal if username is NOT set yet
+      if (needsUsername) {
+         setShowUsernameModal(true);
+         return;
+      }
+
       if (!name.trim()) {
          setError('Please enter a tournament name.');
          return;
@@ -120,6 +129,18 @@ export default function CreateTournamentPage() {
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
+         {showUsernameModal && address && (
+            <UsernameModal
+               address={address}
+               onComplete={() => {
+                  setNeedsUsername(false);
+                  setShowUsernameModal(false);
+                  // Auto-submit after username is set
+                  handleSubmit();
+               }}
+               onClose={() => setShowUsernameModal(false)}
+            />
+         )}
          <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-700/8 blur-[120px] rounded-full pointer-events-none z-0" />
 
          <div className="relative z-10 max-w-2xl mx-auto">

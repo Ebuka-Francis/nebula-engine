@@ -1,20 +1,40 @@
 'use client';
 
-import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
+import UsernameModal from '../modals/UsernameModal';
+import { getPlayer } from '@/lib/playerService'; // make sure this exists
 
 export default function TopNav() {
    const [menuOpen, setMenuOpen] = useState(false);
+   const [showUsernameModal, setShowUsernameModal] = useState(false);
+   const [username, setUsername] = useState<string | null>(null);
    const pathname = usePathname();
+   const { address, isConnected } = useAccount();
+
+   // Fetch username when wallet connects
+   useEffect(() => {
+      if (!address) {
+         setUsername(null);
+         return;
+      }
+      getPlayer(address.toLowerCase()).then((player) => {
+         setUsername(player?.username ?? null);
+      });
+   }, [address]);
 
    const navLinks = [
       { name: 'Tournaments', href: '/tournament' },
       { name: 'Dashboard', href: '/dashboard' },
       { name: 'Leaderboard', href: '/leaderboard' },
    ];
+
+   // show button if connected but no username yet
+   const showAvatarButton = isConnected && address && !username;
 
    return (
       <>
@@ -120,13 +140,62 @@ export default function TopNav() {
                })}
             </div>
 
-            {/* Desktop — RainbowKit Connect Button */}
-            <div className="desktop-nav">
+            {/* Desktop Right Side — Connect Button + Avatar */}
+            <div
+               className="desktop-nav"
+               style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+            >
                <ConnectButton
                   showBalance={true}
                   chainStatus="icon"
                   accountStatus="avatar"
                />
+
+               {/* Only show if connected and no username yet */}
+               {showAvatarButton && (
+                  <button
+                     onClick={() => setShowUsernameModal(true)}
+                     title="Set Username"
+                     style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background:
+                           'linear-gradient(135deg, #7c3aed22, #a855f722)',
+                        border: '1px solid rgba(168, 85, 247, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0,
+                     }}
+                     onMouseEnter={(e) => {
+                        (
+                           e.currentTarget as HTMLButtonElement
+                        ).style.background =
+                           'linear-gradient(135deg, #7c3aed44, #a855f744)';
+                        (
+                           e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = 'rgba(168, 85, 247, 0.6)';
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                           '0 0 12px rgba(168, 85, 247, 0.3)';
+                     }}
+                     onMouseLeave={(e) => {
+                        (
+                           e.currentTarget as HTMLButtonElement
+                        ).style.background =
+                           'linear-gradient(135deg, #7c3aed22, #a855f722)';
+                        (
+                           e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                           'none';
+                     }}
+                  >
+                     <User size={16} color="#a855f7" />
+                  </button>
+               )}
             </div>
 
             {/* Hamburger (mobile only) */}
@@ -218,25 +287,70 @@ export default function TopNav() {
                );
             })}
 
-            {/* Connect Wallet in drawer */}
-            <div style={{ marginTop: '24px' }}>
+            {/* Connect Wallet + Avatar in drawer */}
+            <div
+               style={{
+                  marginTop: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+               }}
+            >
                <ConnectButton
                   showBalance={true}
                   chainStatus="none"
                   accountStatus="address"
                />
+
+               {/* Only show if connected and no username yet */}
+               {showAvatarButton && (
+                  <button
+                     onClick={() => {
+                        setMenuOpen(false);
+                        setShowUsernameModal(true);
+                     }}
+                     title="Set Username"
+                     style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background:
+                           'linear-gradient(135deg, #7c3aed22, #a855f722)',
+                        border: '1px solid rgba(168, 85, 247, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                     }}
+                  >
+                     <User size={16} color="#a855f7" />
+                  </button>
+               )}
             </div>
          </div>
 
+         {/* Username Modal */}
+         {showUsernameModal && address && (
+            <UsernameModal
+               address={address}
+               onComplete={(newUsername) => {
+                  setUsername(newUsername); // ← hides button immediately after setting
+                  setShowUsernameModal(false);
+               }}
+               onClose={() => setShowUsernameModal(false)}
+            />
+         )}
+
          <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-nav { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .mobile-nav { display: none !important; }
-        }
-      `}</style>
+            @media (max-width: 768px) {
+               .desktop-nav { display: none !important; }
+               .mobile-nav { display: flex !important; }
+            }
+            @media (min-width: 769px) {
+               .mobile-nav { display: none !important; }
+            }
+         `}</style>
       </>
    );
 }

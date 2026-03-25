@@ -14,16 +14,18 @@ const queryClient = new QueryClient();
 
 function WalletSync({ children }: { children: React.ReactNode }) {
    const { address } = useAccount();
-   const { needsUsername, setNeedsUsername } = useWalletSync();
-   useFirebaseAuth(); // ← now just does anonymous sign in, no signature needed
+   const { needsUsername, setNeedsUsername, checked } = useWalletSync();
+   useFirebaseAuth();
 
    return (
       <>
          {children}
-         {needsUsername && address && (
+         {/* Only show modal after check is done and username is needed */}
+         {checked && needsUsername && address && (
             <UsernameModal
                address={address}
                onComplete={() => setNeedsUsername(false)}
+               onClose={() => setNeedsUsername(false)}
             />
          )}
       </>

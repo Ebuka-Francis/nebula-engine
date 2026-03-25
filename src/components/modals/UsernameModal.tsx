@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Check, X, Loader } from 'lucide-react';
 import { setUsername, isUsernameTaken } from '@/lib/playerService';
@@ -8,14 +8,17 @@ import { setUsername, isUsernameTaken } from '@/lib/playerService';
 interface Props {
    address: string;
    onComplete: (username: string) => void;
+   onClose?: () => void; // ← add this
 }
 
-export default function UsernameModal({ address, onComplete }: Props) {
+export default function UsernameModal({ address, onComplete, onClose }: Props) {
    const [value, setValue] = useState('');
    const [error, setError] = useState('');
    const [checking, setChecking] = useState(false);
    const [saving, setSaving] = useState(false);
    const [available, setAvailable] = useState<boolean | null>(null);
+
+   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
    const validate = (val: string) => {
       if (val.length < 3) return 'Username must be at least 3 characters';
@@ -36,9 +39,9 @@ export default function UsernameModal({ address, onComplete }: Props) {
          return;
       }
 
-      // Debounce check
+      if (timerRef.current) clearTimeout(timerRef.current);
       setChecking(true);
-      setTimeout(async () => {
+      timerRef.current = setTimeout(async () => {
          const taken = await isUsernameTaken(val);
          setAvailable(!taken);
          if (taken) setError('Username already taken');
@@ -59,6 +62,7 @@ export default function UsernameModal({ address, onComplete }: Props) {
          await setUsername(address, value.toLowerCase().trim());
          onComplete(value.toLowerCase().trim());
       } catch (err) {
+         console.error('ERROR:', err);
          setError('Something went wrong. Try again.');
       } finally {
          setSaving(false);
@@ -82,8 +86,16 @@ export default function UsernameModal({ address, onComplete }: Props) {
                animate={{ opacity: 1, scale: 1, y: 0 }}
                exit={{ opacity: 0, scale: 0.9, y: 24 }}
                transition={{ duration: 0.35, ease: 'easeOut' }}
-               className="w-full max-w-md bg-[#111114] border border-white/[0.08] rounded-2xl p-8 shadow-2xl"
+               className="w-full max-w-md bg-[#111114] border border-white/[0.08] rounded-2xl p-8 shadow-2xl relative"
             >
+               {/* Close Button */}
+               <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/[0.06] transition-all duration-200"
+               >
+                  <X size={16} />
+               </button>
+
                {/* Icon */}
                <div className="w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center mx-auto mb-6">
                   <User size={24} className="text-purple-400" />
@@ -111,7 +123,6 @@ export default function UsernameModal({ address, onComplete }: Props) {
                         maxLength={20}
                         className="w-full bg-[#0d0d0f] border border-white/[0.08] rounded-xl pl-8 pr-10 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-purple-500/60 transition-all duration-200"
                      />
-                     {/* Status icon */}
                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
                         {checking && (
                            <Loader
@@ -128,7 +139,6 @@ export default function UsernameModal({ address, onComplete }: Props) {
                      </div>
                   </div>
 
-                  {/* Error / available message */}
                   <AnimatePresence mode="wait">
                      {error && (
                         <motion.p

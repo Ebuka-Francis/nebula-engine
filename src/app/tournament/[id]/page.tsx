@@ -26,6 +26,7 @@ import {
 // Services
 import { joinTournament, startGame } from '@/lib/gameService';
 import { getPlayerStats } from '@/lib/playerService';
+import { useWalletSync } from '@/hooks/useWalletSync';
 
 // Tab components
 import LeaderboardTab from '@/components/tournaments/tabs/LeaderboardTab';
@@ -34,6 +35,7 @@ import PayoutsTab from '@/components/tournaments/tabs/PayoutsTab';
 import PredictionsTab from '@/components/tournaments/tabs/PredictionsTab';
 import PlayTab from '@/components/tournaments/tabs/PlayTab';
 import { useEscrow } from '@/hooks/useEscrow';
+import UsernameModal from '@/components/modals/UsernameModal';
 
 interface Tab {
    id: string;
@@ -96,9 +98,10 @@ function StatusBadge({ status }: { status: string }) {
 export default function TournamentDetailPage() {
    const { id } = useParams();
    const { address, isConnected } = useAccount();
-
+   const { needsUsername, setNeedsUsername } = useWalletSync();
    const { joinTournamentOnChain } = useEscrow();
 
+   const [showUsernameModal, setShowUsernameModal] = useState(false);
    const [tournament, setTournament] = useState<Tournament | null>(null);
    const [loading, setLoading] = useState(true);
    const [notFound, setNotFound] = useState(false);
@@ -148,6 +151,11 @@ export default function TournamentDetailPage() {
          return;
       }
 
+      if (needsUsername === false) {
+         console.log('✅ should show modal now');
+         setShowUsernameModal(true);
+         return;
+      }
       // ✅ Just check wallet is connected — no Firebase auth check needed
       setJoining(true);
       setJoinError('');
@@ -205,6 +213,17 @@ export default function TournamentDetailPage() {
 
    return (
       <div className="min-h-screen bg-[#0d0d0f] px-4 md:px-8 py-10 font-sans">
+         {showUsernameModal && (
+            <UsernameModal
+               address={address!}
+               onComplete={async () => {
+                  setNeedsUsername(false);
+                  setShowUsernameModal(false);
+                  await handleJoin(); // ✅ auto-continues after username is set
+               }}
+               onClose={() => setShowUsernameModal(false)}
+            />
+         )}
          <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-700/8 blur-[120px] rounded-full pointer-events-none z-0" />
 
          <div className="relative z-10 max-w-3xl mx-auto">
