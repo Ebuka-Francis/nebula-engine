@@ -83,6 +83,8 @@ export default function HeroSection() {
       };
    }, []);
 
+   console.log('My API Key is:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+
    return (
       <section
          className="hero-section"

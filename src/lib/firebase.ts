@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 const firebaseConfig = {
@@ -13,12 +13,13 @@ const firebaseConfig = {
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+console.log('Initializing Firebase with Project ID:', firebaseConfig.projectId);
 
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const functions = getFunctions(app);
+export const db = getFirestore(app); // ✅ Live Firestore
+export const auth = getAuth(app); // ✅ Live Auth
+export const functions = getFunctions(app); // starts as live
 
-// ── Connect to emulators in development only ──────────────
+// ✅ Only connect Functions to emulator in development
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
    try {
       connectFunctionsEmulator(functions, '127.0.0.1', 5001);

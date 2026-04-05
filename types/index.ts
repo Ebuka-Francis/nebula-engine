@@ -39,6 +39,19 @@ export interface Player {
    joinedAt: Timestamp;
 }
 
+export interface GamePlayer {
+   isSmallBlind: any;
+   isBigBlind: any;
+   address: string;
+   username?: string;
+   chips: number;
+   currentBet?: number;
+   status?: 'active' | 'folded' | 'eliminated' | 'all-in' | 'sitting-out';
+   isDealer?: boolean;
+   lastAction?: string;
+   lastActionAmount?: number;
+}
+
 // ─── Payout ───────────────────────────────────────────
 export interface Payout {
    id: string;
@@ -66,21 +79,6 @@ export type PlayerStatus =
    | 'all-in'
    | 'sitting-out'
    | 'eliminated';
-
-export interface GamePlayer {
-   address: string;
-   username: string;
-   chips: number;
-   holeCards: Card[]; // only visible to the player themselves
-   status: PlayerStatus;
-   currentBet: number;
-   isDealer: boolean;
-   isSmallBlind: boolean;
-   isBigBlind: boolean;
-   seatIndex: number;
-   lastAction: PlayerAction | null;
-   timeBank: number; // extra seconds
-}
 
 export interface GameState {
    tournamentId: string;

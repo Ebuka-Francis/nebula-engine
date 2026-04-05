@@ -1,10 +1,13 @@
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { FieldValue } from 'firebase-admin/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { createDeck, shuffleDeck, Card } from './poker/deck';
 import { evaluateHand } from './poker/handEvaluator';
 
-admin.initializeApp();
+if (!admin.apps.length) {
+   admin.initializeApp();
+}
 const db = admin.firestore();
 
 // ── Start Game ────────────────────────────────────────────
@@ -27,38 +30,42 @@ export const startGame = onCall(async (request) => {
    }
 
    const tournament = tournamentSnap.data()!;
-   if (tournament.creatorAddress !== request.auth.uid) {
-      throw new HttpsError(
-         'permission-denied',
-         'Only creator can start the game',
-      );
-   }
 
-   // Build player list from registrations
+   // ✅ Get ALL registrations
    const playersSnap = await db
       .collection('tournaments')
       .doc(tournamentId)
       .collection('registrations')
       .get();
 
+   if (playersSnap.docs.length < 2) {
+      throw new HttpsError(
+         'failed-precondition',
+         'Need at least 2 registered players',
+      );
+   }
+
+   // ✅ Build players object from ALL registrations
    const players: Record<string, any> = {};
    playersSnap.docs.forEach((doc, i) => {
       const p = doc.data();
       players[p.address] = {
          address: p.address,
-         username: p.username,
-         chips: tournament.startingStack,
+         username: p.username ?? `Player ${i + 1}`,
+         chips: tournament.startingStack ?? 10000,
          holeCards: [],
          status: 'active',
          currentBet: 0,
-         isDealer: i === 0,
-         isSmallBlind: i === 1,
-         isBigBlind: i === 2,
+         isDealer: false,
+         isSmallBlind: false,
+         isBigBlind: false,
          seatIndex: i,
          lastAction: null,
          timeBank: 30,
       };
    });
+
+   console.log(`Starting game with ${Object.keys(players).length} players`);
 
    const initialState = {
       tournamentId,
@@ -69,8 +76,8 @@ export const startGame = onCall(async (request) => {
       sidePots: [],
       currentTurn: null,
       dealerIndex: 0,
-      smallBlind: Math.floor(tournament.startingStack * 0.01),
-      bigBlind: Math.floor(tournament.startingStack * 0.02),
+      smallBlind: Math.floor((tournament.startingStack ?? 10000) * 0.01),
+      bigBlind: Math.floor((tournament.startingStack ?? 10000) * 0.02),
       currentBet: 0,
       handNumber: 0,
       turnDeadline: null,
@@ -80,9 +87,11 @@ export const startGame = onCall(async (request) => {
 
    await gameRef.set(initialState);
    await tournamentRef.update({ status: 'live' });
+
+   // Deal first hand
    await dealNewHand(tournamentId, initialState);
 
-   return { success: true };
+   return { success: true, playerCount: Object.keys(players).length };
 });
 
 // ── Deal New Hand ─────────────────────────────────────────
@@ -92,41 +101,67 @@ async function dealNewHand(tournamentId: string, state: any) {
    let deckIndex = 0;
 
    const players = { ...state.players };
+
+   // ✅ Get ALL active players, not just blinds
    const activePlayers: any[] = Object.values(players).filter(
       (p: any) => p.status !== 'eliminated',
    );
 
-   // Post blinds
-   const sbPlayer = activePlayers.find((p: any) => p.isSmallBlind);
-   const bbPlayer = activePlayers.find((p: any) => p.isBigBlind);
-
-   if (sbPlayer) {
-      players[sbPlayer.address].chips -= state.smallBlind;
-      players[sbPlayer.address].currentBet = state.smallBlind;
-   }
-   if (bbPlayer) {
-      players[bbPlayer.address].chips -= state.bigBlind;
-      players[bbPlayer.address].currentBet = state.bigBlind;
+   if (activePlayers.length < 2) {
+      throw new HttpsError('failed-precondition', 'Need at least 2 players');
    }
 
-   // Deal hole cards privately per player
+   // ── Assign dealer, small blind, big blind ──
+   // Reset all blind/dealer flags first
+   activePlayers.forEach((p: any) => {
+      players[p.address].isDealer = false;
+      players[p.address].isSmallBlind = false;
+      players[p.address].isBigBlind = false;
+      players[p.address].currentBet = 0;
+      players[p.address].lastAction = null;
+      players[p.address].status = 'active';
+   });
+
+   // Assign based on seat index
+   const sorted = activePlayers.sort(
+      (a: any, b: any) => a.seatIndex - b.seatIndex,
+   );
+   const dealerIdx = state.handNumber % sorted.length;
+   const sbIdx = (dealerIdx + 1) % sorted.length;
+   const bbIdx = (dealerIdx + 2) % sorted.length;
+
+   players[sorted[dealerIdx].address].isDealer = true;
+   players[sorted[sbIdx].address].isSmallBlind = true;
+   players[sorted[bbIdx].address].isBigBlind = true;
+
+   // ── Post blinds ──
+   players[sorted[sbIdx].address].chips -= state.smallBlind;
+   players[sorted[sbIdx].address].currentBet = state.smallBlind;
+
+   players[sorted[bbIdx].address].chips -= state.bigBlind;
+   players[sorted[bbIdx].address].currentBet = state.bigBlind;
+
+   // ── Deal 2 hole cards to EVERY active player ──
+   const batch = db.batch();
+
    for (const player of activePlayers) {
       const card1 = deck[deckIndex++];
       const card2 = deck[deckIndex++];
-      players[player.address].holeCards = [];
 
-      await db
-         .collection('gameState')
-         .doc(tournamentId)
-         .collection('privateHands')
-         .doc(player.address)
-         .set({ holeCards: [card1, card2] });
+      // Store privately in subcollection
+      const handRef = gameRef.collection('privateHands').doc(player.address);
+
+      batch.set(handRef, { holeCards: [card1, card2] });
    }
 
+   await batch.commit();
+
+   // Remaining deck for community cards
    const remainingDeck = deck.slice(deckIndex);
 
-   const bbIndex = activePlayers.findIndex((p: any) => p.isBigBlind);
-   const firstToAct = activePlayers[(bbIndex + 1) % activePlayers.length];
+   // First to act is after big blind
+   const firstToActIdx = (bbIdx + 1) % sorted.length;
+   const firstToAct = sorted[firstToActIdx];
 
    await gameRef.update({
       phase: 'preflop',
@@ -134,7 +169,7 @@ async function dealNewHand(tournamentId: string, state: any) {
       communityCards: [],
       pot: state.smallBlind + state.bigBlind,
       currentBet: state.bigBlind,
-      currentTurn: firstToAct?.address ?? null,
+      currentTurn: firstToAct.address,
       handNumber: (state.handNumber || 0) + 1,
       turnDeadline: Date.now() + 30000,
       winners: null,
@@ -149,8 +184,16 @@ export const playerAction = onCall(async (request) => {
       throw new HttpsError('unauthenticated', 'Must be authenticated');
    }
 
-   const { tournamentId, action, amount } = request.data;
-   const playerAddress: string = request.auth.uid;
+   const {
+      tournamentId,
+      action,
+      amount,
+      playerAddress: walletAddress,
+   } = request.data;
+   if (!walletAddress) {
+      throw new HttpsError('invalid-argument', 'playerAddress is required');
+   }
+   const playerAddress: string = walletAddress.toLowerCase();
 
    if (!tournamentId || !action) {
       throw new HttpsError(
@@ -168,7 +211,15 @@ export const playerAction = onCall(async (request) => {
 
    const state = gameSnap.data()!;
 
-   if (state.currentTurn !== playerAddress) {
+   // ADD THIS 👇
+   // console.log('DEBUG', {
+   //    playerAddress,
+   //    currentTurn: state.currentTurn,
+   //    currentTurnLower: state.currentTurn?.toLowerCase(),
+   //    match: state.currentTurn?.toLowerCase() === playerAddress,
+   // });
+
+   if (state.currentTurn?.toLowerCase() !== playerAddress) {
       throw new HttpsError('failed-precondition', 'Not your turn');
    }
 
@@ -178,6 +229,14 @@ export const playerAction = onCall(async (request) => {
    if (!player) {
       throw new HttpsError('not-found', 'Player not found in game');
    }
+
+   // if (player.firebaseUid !== request.auth.uid) {
+   //    console.log('error', player.firebaseUid, request.auth.uid);
+   //    throw new HttpsError(
+   //       'permission-denied',
+   //       'Address does not match auth session',
+   //    );
+   // }
 
    // Apply action
    switch (action as string) {
@@ -253,19 +312,21 @@ export const playerAction = onCall(async (request) => {
       ...Object.values(players).map((p: any) => p.currentBet ?? 0),
    );
 
-   // Find next active player
+   // Find next active player (after action is applied, so folded player is excluded)
    const activePlayers: any[] = Object.values(players)
       .filter((p: any) => p.status === 'active')
       .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
 
-   const currentIndex = activePlayers.findIndex(
-      (p: any) => p.address === playerAddress,
-   );
-   const nextPlayer = activePlayers[(currentIndex + 1) % activePlayers.length];
+   // Use seatIndex to find next player — handles fold case where current player
+   // is no longer in activePlayers
+   const currentSeatIndex = players[playerAddress].seatIndex;
+   const nextPlayer =
+      activePlayers.find((p: any) => p.seatIndex > currentSeatIndex) ??
+      activePlayers[0];
 
-   // Check if betting round is over
+   // Fixed: removed || p.status !== 'active' which was always false after filter
    const allActed = activePlayers.every(
-      (p: any) => p.currentBet === newCurrentBet || p.status !== 'active',
+      (p: any) => p.currentBet === newCurrentBet,
    );
 
    let updates: any = {
@@ -486,7 +547,7 @@ export const autoRemoveUnconfirmed = onSchedule('every 1 minutes', async () => {
          if (!reg.confirmed) {
             batch.update(regDoc.ref, {
                status: 'removed',
-               removedAt: admin.firestore.FieldValue.serverTimestamp(),
+               removedAt: FieldValue.serverTimestamp(),
                removedReason: 'Did not confirm seat within 20 minutes',
             });
 
@@ -515,3 +576,104 @@ export const autoRemoveUnconfirmed = onSchedule('every 1 minutes', async () => {
       }
    }
 });
+
+// ── Force Start (Manual) ──────────────────────────────────
+export const startGameManually = onCall(
+   {
+      cors: true,
+   },
+   async (request) => {
+      const { tournamentId } = request.data;
+      const uid = request.auth?.uid;
+
+      if (!uid) {
+         throw new HttpsError('unauthenticated', 'Must be authenticated');
+      }
+
+      const tournamentRef = db.collection('tournaments').doc(tournamentId);
+      const tournamentSnap = await tournamentRef.get();
+
+      if (!tournamentSnap.exists) {
+         throw new HttpsError('not-found', 'Tournament not found');
+      }
+
+      const tournament = tournamentSnap.data()!;
+
+      if (tournament.status === 'live') {
+         return { success: false, message: 'Game already in progress' };
+      }
+
+      // ── 1. Get ALL registrations ──────────────────────────
+      const playersSnap = await db
+         .collection('tournaments')
+         .doc(tournamentId)
+         .collection('registrations')
+         .get();
+
+      if (playersSnap.docs.length < 2) {
+         throw new HttpsError(
+            'failed-precondition',
+            'Need at least 2 registered players to start',
+         );
+      }
+
+      console.log(`Starting game with ${playersSnap.docs.length} players`);
+
+      // ── 2. Build players — all flags false, dealNewHand assigns them ──
+      const players: Record<string, any> = {};
+      playersSnap.docs.forEach((doc, i) => {
+         const p = doc.data();
+         players[p.address] = {
+            address: p.address,
+            username: p.username ?? `Player ${i + 1}`,
+            chips: tournament.startingStack ?? 10000,
+            holeCards: [],
+            status: 'active',
+            currentBet: 0,
+            isDealer: false, // ✅ assigned in dealNewHand
+            isSmallBlind: false, // ✅ assigned in dealNewHand
+            isBigBlind: false, // ✅ assigned in dealNewHand
+            seatIndex: i,
+            lastAction: null,
+            timeBank: 30,
+         };
+      });
+
+      // ── 3. Define initial game state ──────────────────────
+      const initialState = {
+         tournamentId,
+         phase: 'starting',
+         players,
+         communityCards: [],
+         pot: 0,
+         sidePots: [],
+         currentTurn: null,
+         dealerIndex: 0,
+         smallBlind: Math.floor((tournament.startingStack ?? 10000) * 0.01),
+         bigBlind: Math.floor((tournament.startingStack ?? 10000) * 0.02),
+         currentBet: 0,
+         handNumber: 0,
+         turnDeadline: null,
+         winners: null,
+         lastUpdated: Date.now(),
+      };
+
+      // ── 4. Save game state ────────────────────────────────
+      const gameRef = db.collection('gameState').doc(tournamentId);
+      await gameRef.set(initialState);
+
+      // ── 5. Update tournament status ───────────────────────
+      await tournamentRef.update({
+         status: 'live',
+         startTime: FieldValue.serverTimestamp(),
+      });
+
+      // ── 6. Deal first hand to ALL players ─────────────────
+      await dealNewHand(tournamentId, initialState);
+
+      return {
+         success: true,
+         playerCount: Object.keys(players).length,
+      };
+   },
+);

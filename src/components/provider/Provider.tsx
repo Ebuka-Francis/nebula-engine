@@ -42,6 +42,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   accentColorForeground: 'white',
                   borderRadius: 'medium',
                })}
+               showRecentTransactions={false}
             >
                <WalletSync>{children}</WalletSync>
             </RainbowKitProvider>

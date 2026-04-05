@@ -16,6 +16,9 @@
       ]
     }
   ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "emulators": {
     "auth": {
       "port": 9099
@@ -30,6 +33,9 @@
       "enabled": true,
       "port": 4000
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "pubsub": {
+      "port": 8085
+    }
   }
 }

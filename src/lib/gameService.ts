@@ -1,33 +1,74 @@
 import { httpsCallable } from 'firebase/functions';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import {
+   doc,
+   setDoc,
+   getDoc,
+   serverTimestamp,
+   increment,
+   updateDoc,
+   runTransaction,
+} from 'firebase/firestore';
 import { db, functions } from '@/lib/firebase';
 
 // Join a tournament — adds player to registrations subcollection
+
 export async function joinTournament(
    tournamentId: string,
    address: string,
    username: string,
 ): Promise<void> {
+   const tournamentRef = doc(db, 'tournaments', tournamentId);
    const registrationRef = doc(
       db,
       'tournaments',
       tournamentId,
       'registrations',
-      address,
+      address.toLowerCase(),
    );
 
-   // Check if already joined
-   const existing = await getDoc(registrationRef);
-   if (existing.exists()) {
-      throw new Error('You have already joined this tournament.');
-   }
+   try {
+      await runTransaction(db, async (transaction) => {
+         const tournamentSnap = await transaction.get(tournamentRef);
+         const registrationSnap = await transaction.get(registrationRef);
 
-   await setDoc(registrationRef, {
-      address,
-      username,
-      joinedAt: serverTimestamp(),
-      status: 'registered',
-   });
+         if (!tournamentSnap.exists()) {
+            throw new Error('Tournament does not exist.');
+         }
+
+         const tournamentData = tournamentSnap.data();
+
+         // FIX: Ensure currentPlayers is treated as a number
+         const currentCount = Number(tournamentData.currentPlayers || 0);
+         const maxPlayers = Number(tournamentData.maxPlayers || 10);
+
+         if (registrationSnap.exists()) {
+            throw new Error('You have already joined this tournament.');
+         }
+
+         if (currentCount >= maxPlayers) {
+            throw new Error('Tournament is full.');
+         }
+
+         // 1. Create registration
+         transaction.set(registrationRef, {
+            address: address.toLowerCase(),
+            username,
+            joinedAt: serverTimestamp(),
+            status: 'registered',
+         });
+
+         const newCount = (tournamentData.currentPlayers || 0) + 1;
+
+         transaction.update(tournamentRef, {
+            currentPlayers: newCount,
+            lastUpdated: Date.now(),
+         });
+         console.log('newcount>>>>>>>>>', newCount);
+      });
+   } catch (error: any) {
+      console.error('Join Transaction Failed:', error.message);
+      throw error;
+   }
 }
 
 // Start the game — calls Cloud Function
