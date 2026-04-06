@@ -60,10 +60,9 @@ export async function joinTournament(
          const newCount = (tournamentData.currentPlayers || 0) + 1;
 
          transaction.update(tournamentRef, {
-            currentPlayers: newCount,
+            currentPlayers: increment(1), // Let Firebase handle the math
             lastUpdated: Date.now(),
          });
-         console.log('newcount>>>>>>>>>', newCount);
       });
    } catch (error: any) {
       console.error('Join Transaction Failed:', error.message);

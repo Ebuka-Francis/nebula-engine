@@ -479,103 +479,116 @@ async function determineWinners(
 }
 
 // ── Auto Turn Timer ───────────────────────────────────────
-export const checkTurnTimer = onSchedule('every 1 minutes', async () => {
-   const now = Date.now();
+export const checkTurnTimer = onSchedule(
+   {
+      schedule: 'every 1 minutes', // or whatever your frequency is
+      invoker: 'private', // <--- This is the magic line
+   },
+   async () => {
+      const now = Date.now();
 
-   const activeGames = await db
-      .collection('gameState')
-      .where('phase', 'not-in', ['waiting', 'finished', 'showdown'])
-      .get();
-
-   for (const gameDoc of activeGames.docs) {
-      const state = gameDoc.data();
-
-      if (state.turnDeadline && now > state.turnDeadline && state.currentTurn) {
-         const players = { ...state.players };
-         players[state.currentTurn].status = 'folded';
-         players[state.currentTurn].lastAction = 'fold';
-
-         const activePlayers: any[] = Object.values(players)
-            .filter((p: any) => p.status === 'active')
-            .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
-
-         const nextPlayer: any = activePlayers[0];
-
-         await gameDoc.ref.update({
-            players,
-            currentTurn: nextPlayer?.address ?? null,
-            turnDeadline: nextPlayer ? Date.now() + 30000 : null,
-            lastUpdated: Date.now(),
-         });
-      }
-   }
-});
-
-// ── Auto-remove unconfirmed players ───────────────────────
-export const autoRemoveUnconfirmed = onSchedule('every 1 minutes', async () => {
-   const now = Date.now();
-   const CONFIRM_WINDOW_MS = 20 * 60 * 1000; // 20 minutes
-
-   // Find live tournaments
-   const liveTournaments = await db
-      .collection('tournaments')
-      .where('status', '==', 'live')
-      .get();
-
-   for (const tournamentDoc of liveTournaments.docs) {
-      const tournament = tournamentDoc.data();
-      const startTime = tournament.startTime?.toMillis?.() ?? 0;
-      const deadline = startTime + CONFIRM_WINDOW_MS;
-
-      // Only process if we're past the deadline
-      if (now < deadline) continue;
-
-      // Get all registrations
-      const registrationsSnap = await db
-         .collection('tournaments')
-         .doc(tournamentDoc.id)
-         .collection('registrations')
+      const activeGames = await db
+         .collection('gameState')
+         .where('phase', 'not-in', ['waiting', 'finished', 'showdown'])
          .get();
 
-      const batch = db.batch();
-      let removedCount = 0;
+      for (const gameDoc of activeGames.docs) {
+         const state = gameDoc.data();
 
-      for (const regDoc of registrationsSnap.docs) {
-         const reg = regDoc.data();
+         if (
+            state.turnDeadline &&
+            now > state.turnDeadline &&
+            state.currentTurn
+         ) {
+            const players = { ...state.players };
+            players[state.currentTurn].status = 'folded';
+            players[state.currentTurn].lastAction = 'fold';
 
-         // Remove players who didn't confirm
-         if (!reg.confirmed) {
-            batch.update(regDoc.ref, {
-               status: 'removed',
-               removedAt: FieldValue.serverTimestamp(),
-               removedReason: 'Did not confirm seat within 20 minutes',
+            const activePlayers: any[] = Object.values(players)
+               .filter((p: any) => p.status === 'active')
+               .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
+
+            const nextPlayer: any = activePlayers[0];
+
+            await gameDoc.ref.update({
+               players,
+               currentTurn: nextPlayer?.address ?? null,
+               turnDeadline: nextPlayer ? Date.now() + 30000 : null,
+               lastUpdated: Date.now(),
             });
-
-            // Also update their status in game state if game has started
-            const gameRef = db.collection('gameState').doc(tournamentDoc.id);
-            const gameSnap = await gameRef.get();
-            if (gameSnap.exists) {
-               const gameState = gameSnap.data()!;
-               if (gameState.players?.[reg.address]) {
-                  batch.update(gameRef, {
-                     [`players.${reg.address}.status`]: 'eliminated',
-                     [`players.${reg.address}.lastAction`]: 'no-show',
-                  });
-               }
-            }
-
-            removedCount++;
          }
       }
+   },
+);
 
-      if (removedCount > 0) {
-         await batch.commit();
-         console.log(
-            `Removed ${removedCount} unconfirmed players from tournament ${tournamentDoc.id}`,
-         );
+// ── Auto-remove unconfirmed players ───────────────────────
+export const autoRemoveUnconfirmed = onSchedule(
+   { schedule: 'every 1 minutes', invoker: 'service-account-email-here' },
+   async () => {
+      const now = Date.now();
+      const CONFIRM_WINDOW_MS = 20 * 60 * 1000; // 20 minutes
+
+      // Find live tournaments
+      const liveTournaments = await db
+         .collection('tournaments')
+         .where('status', '==', 'live')
+         .get();
+
+      for (const tournamentDoc of liveTournaments.docs) {
+         const tournament = tournamentDoc.data();
+         const startTime = tournament.startTime?.toMillis?.() ?? 0;
+         const deadline = startTime + CONFIRM_WINDOW_MS;
+
+         // Only process if we're past the deadline
+         if (now < deadline) continue;
+
+         // Get all registrations
+         const registrationsSnap = await db
+            .collection('tournaments')
+            .doc(tournamentDoc.id)
+            .collection('registrations')
+            .get();
+
+         const batch = db.batch();
+         let removedCount = 0;
+
+         for (const regDoc of registrationsSnap.docs) {
+            const reg = regDoc.data();
+
+            // Remove players who didn't confirm
+            if (!reg.confirmed) {
+               batch.update(regDoc.ref, {
+                  status: 'removed',
+                  removedAt: FieldValue.serverTimestamp(),
+                  removedReason: 'Did not confirm seat within 20 minutes',
+               });
+
+               // Also update their status in game state if game has started
+               const gameRef = db.collection('gameState').doc(tournamentDoc.id);
+               const gameSnap = await gameRef.get();
+               if (gameSnap.exists) {
+                  const gameState = gameSnap.data()!;
+                  if (gameState.players?.[reg.address]) {
+                     batch.update(gameRef, {
+                        [`players.${reg.address}.status`]: 'eliminated',
+                        [`players.${reg.address}.lastAction`]: 'no-show',
+                     });
+                  }
+               }
+
+               removedCount++;
+            }
+         }
+
+         if (removedCount > 0) {
+            await batch.commit();
+            console.log(
+               `Removed ${removedCount} unconfirmed players from tournament ${tournamentDoc.id}`,
+            );
+         }
       }
-   }
-});
+   },
+);
 
 // ── Force Start (Manual) ──────────────────────────────────
 export const startGameManually = onCall(
