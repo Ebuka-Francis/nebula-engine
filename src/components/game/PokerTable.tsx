@@ -227,10 +227,7 @@ export default function PokerTable({ tournamentId }: Props) {
    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
    const firebaseFunctions = getFunctions();
-   const startGameManually = httpsCallable(
-      firebaseFunctions,
-      'startGameManually',
-   );
+   const startGameFn = httpsCallable(firebaseFunctions, 'startGameManually');
    const { address } = useAccount();
 
    const [gameState, setGameState] = useState<GameState | null>(null);
@@ -277,9 +274,13 @@ export default function PokerTable({ tournamentId }: Props) {
       try {
          setLoading(true);
 
-         await startGameManually({ tournamentId: tid });
-      } catch (error) {
-         console.error('Error starting game:', error);
+         // 2. Use the initialized 'startGameFn' instead of the raw function name
+         const result = await startGameFn({ tournamentId: tid });
+
+         console.log('Game started successfully:', result.data);
+      } catch (error: any) {
+         // This will now catch the specific Firebase error
+         console.error('Error starting game:', error.message);
       } finally {
          setLoading(false);
       }

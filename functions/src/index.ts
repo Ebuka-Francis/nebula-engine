@@ -595,7 +595,7 @@ export const startGameManually = onCall(
    {
       invoker: 'public',
       region: 'us-central1',
-      // cors: true,
+      cors: true,
    },
    async (request) => {
       const { tournamentId } = request.data;
