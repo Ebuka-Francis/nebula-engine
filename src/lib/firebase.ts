@@ -22,7 +22,7 @@ export const functions = getFunctions(app); // starts as live
 // ✅ Only connect Functions to emulator in development
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
    try {
-      connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+      // connectFunctionsEmulator(functions, '127.0.0.1', 5001);
    } catch (e) {
       // Already connected — ignore
    }

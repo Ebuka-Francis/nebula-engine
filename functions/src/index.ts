@@ -593,7 +593,9 @@ export const autoRemoveUnconfirmed = onSchedule(
 // ── Force Start (Manual) ──────────────────────────────────
 export const startGameManually = onCall(
    {
-      cors: true,
+      invoker: 'public',
+      region: 'us-central1',
+      // cors: true,
    },
    async (request) => {
       const { tournamentId } = request.data;
