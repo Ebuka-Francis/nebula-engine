@@ -46,15 +46,17 @@ export default function PlayerHUD({
 
    const position = SEAT_POSITIONS[seatIndex % SEAT_POSITIONS.length];
 
+   // ── Updated Status Styles ──
    const statusColorMap: Record<string, string> = {
       active: 'border-white/20',
       folded: 'border-red-500/20 opacity-40',
       'all-in': 'border-yellow-500/40',
       'sitting-out': 'border-white/10 opacity-30',
-      eliminated: 'border-red-500/10 opacity-20',
+      eliminated: 'border-red-900/40 grayscale opacity-40 scale-90', // Muted and smaller
    };
 
-   // Access using the map with a fallback
+   const isEliminated = player.status === 'eliminated';
+
    const statusColor =
       player.status && statusColorMap[player.status]
          ? statusColorMap[player.status]
@@ -62,12 +64,12 @@ export default function PlayerHUD({
 
    return (
       <div
-         className="absolute pointer-events-none"
+         className="absolute pointer-events-none transition-all duration-700"
          style={position as React.CSSProperties}
       >
          <div className="flex flex-col items-center gap-1.5">
-            {/* Turn timer ring */}
-            {isCurrentTurn && (
+            {/* Turn timer ring (Hidden if eliminated) */}
+            {isCurrentTurn && !isEliminated && (
                <div className="relative w-10 h-10 mb-1">
                   <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
                      <circle
@@ -97,29 +99,39 @@ export default function PlayerHUD({
 
             {/* Player card */}
             <div
-               className={`px-3 py-2 rounded-xl border ${statusColor} ${
-                  isMe
+               className={`px-3 py-2 rounded-xl border transition-all duration-500 ${statusColor} ${
+                  isMe && !isEliminated
                      ? 'bg-purple-600/30 border-purple-500/50 shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                     : 'bg-black/70'
+                     : isEliminated
+                       ? 'bg-red-950/20'
+                       : 'bg-black/70'
                } backdrop-blur-sm flex flex-col items-center gap-0.5 min-w-[90px]`}
             >
                {/* Username */}
                <span
-                  className={`text-xs font-bold truncate max-w-[80px] ${isMe ? 'text-purple-200' : 'text-white/80'}`}
+                  className={`text-xs font-bold truncate max-w-[80px] ${
+                     isEliminated
+                        ? 'text-white/20 line-through'
+                        : isMe
+                          ? 'text-purple-200'
+                          : 'text-white/80'
+                  }`}
                >
                   {player.username || `${player.address.slice(0, 4)}...`}
-                  {isMe && (
+                  {isMe && !isEliminated && (
                      <span className="text-purple-400 text-[9px]"> (You)</span>
                   )}
                </span>
 
-               {/* Chips */}
-               <span className="text-emerald-400 text-xs font-black">
-                  {player.chips.toLocaleString()} 🪙
+               {/* Chips / Busted Status */}
+               <span
+                  className={`text-xs font-black ${isEliminated ? 'text-red-900/50' : 'text-emerald-400'}`}
+               >
+                  {isEliminated ? 'OUT' : `${player.chips.toLocaleString()} 🪙`}
                </span>
 
-               {/* Last action */}
-               {player.lastAction && (
+               {/* Last action (Hidden if eliminated) */}
+               {player.lastAction && !isEliminated && (
                   <span
                      className={`text-[9px] uppercase tracking-wider font-bold ${
                         player.lastAction === 'fold'
@@ -136,39 +148,47 @@ export default function PlayerHUD({
                )}
 
                {/* Current bet */}
-               {(player?.currentBet ?? 0) > 0 && (
+               {(player?.currentBet ?? 0) > 0 && !isEliminated && (
                   <span className="text-yellow-400 text-[9px] font-semibold">
                      Bet: {player.currentBet}
                   </span>
                )}
             </div>
 
-            {/* Dealer/Blind badges */}
+            {/* Dealer/Blind/Status badges */}
             <div className="flex gap-1">
-               {player.isDealer && (
-                  <span className="text-[8px] font-black bg-white text-black px-1.5 py-0.5 rounded-full">
-                     D
+               {isEliminated ? (
+                  <span className="text-[8px] font-black bg-red-900/20 text-red-700 px-1.5 py-0.5 rounded-full border border-red-900/30">
+                     ELIMINATED
                   </span>
-               )}
-               {player.isSmallBlind && (
-                  <span className="text-[8px] font-black bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
-                     SB
-                  </span>
-               )}
-               {player.isBigBlind && (
-                  <span className="text-[8px] font-black bg-purple-600 text-white px-1.5 py-0.5 rounded-full">
-                     BB
-                  </span>
-               )}
-               {player.status === 'all-in' && (
-                  <span className="text-[8px] font-black bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
-                     ALL IN
-                  </span>
-               )}
-               {player.status === 'folded' && (
-                  <span className="text-[8px] font-black bg-red-500/50 text-white px-1.5 py-0.5 rounded-full">
-                     FOLD
-                  </span>
+               ) : (
+                  <>
+                     {player.isDealer && (
+                        <span className="text-[8px] font-black bg-white text-black px-1.5 py-0.5 rounded-full">
+                           D
+                        </span>
+                     )}
+                     {player.isSmallBlind && (
+                        <span className="text-[8px] font-black bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
+                           SB
+                        </span>
+                     )}
+                     {player.isBigBlind && (
+                        <span className="text-[8px] font-black bg-purple-600 text-white px-1.5 py-0.5 rounded-full">
+                           BB
+                        </span>
+                     )}
+                     {player.status === 'all-in' && (
+                        <span className="text-[8px] font-black bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
+                           ALL IN
+                        </span>
+                     )}
+                     {player.status === 'folded' && (
+                        <span className="text-[8px] font-black bg-red-500/50 text-white px-1.5 py-0.5 rounded-full">
+                           FOLD
+                        </span>
+                     )}
+                  </>
                )}
             </div>
          </div>

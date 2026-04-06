@@ -374,6 +374,17 @@ export default function PokerTable({ tournamentId }: Props) {
       };
    }, []);
 
+   useEffect(() => {
+      // Only auto-start next hand if the hand ended but someone hasn't won the whole tourney yet
+      if (gameState?.phase === 'showdown' && isHost) {
+         const timer = setTimeout(() => {
+            handleHostStartNow(tournamentId);
+         }, 7000);
+
+         return () => clearTimeout(timer);
+      }
+   }, [gameState?.phase, isHost]);
+
    // ── Render Logic ──
    const showPreGame =
       tournament?.startTime &&

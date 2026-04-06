@@ -190,6 +190,7 @@ export const playerAction = onCall(async (request) => {
       amount,
       playerAddress: walletAddress,
    } = request.data;
+
    if (!walletAddress) {
       throw new HttpsError('invalid-argument', 'playerAddress is required');
    }
@@ -211,14 +212,6 @@ export const playerAction = onCall(async (request) => {
 
    const state = gameSnap.data()!;
 
-   // ADD THIS 👇
-   // console.log('DEBUG', {
-   //    playerAddress,
-   //    currentTurn: state.currentTurn,
-   //    currentTurnLower: state.currentTurn?.toLowerCase(),
-   //    match: state.currentTurn?.toLowerCase() === playerAddress,
-   // });
-
    if (state.currentTurn?.toLowerCase() !== playerAddress) {
       throw new HttpsError('failed-precondition', 'Not your turn');
    }
@@ -229,14 +222,6 @@ export const playerAction = onCall(async (request) => {
    if (!player) {
       throw new HttpsError('not-found', 'Player not found in game');
    }
-
-   // if (player.firebaseUid !== request.auth.uid) {
-   //    console.log('error', player.firebaseUid, request.auth.uid);
-   //    throw new HttpsError(
-   //       'permission-denied',
-   //       'Address does not match auth session',
-   //    );
-   // }
 
    // Apply action
    switch (action as string) {
@@ -263,9 +248,8 @@ export const playerAction = onCall(async (request) => {
          players[playerAddress].chips -= callAmount;
          players[playerAddress].currentBet += callAmount;
          players[playerAddress].lastAction = 'call';
-         if (players[playerAddress].chips === 0) {
+         if (players[playerAddress].chips === 0)
             players[playerAddress].status = 'all-in';
-         }
          break;
       }
 
@@ -278,15 +262,13 @@ export const playerAction = onCall(async (request) => {
          }
          const raiseTotal = amount;
          const raiseMore = raiseTotal - player.currentBet;
-         if (raiseMore > player.chips) {
+         if (raiseMore > player.chips)
             throw new HttpsError('invalid-argument', 'Not enough chips');
-         }
          players[playerAddress].chips -= raiseMore;
          players[playerAddress].currentBet = raiseTotal;
          players[playerAddress].lastAction = 'raise';
-         if (players[playerAddress].chips === 0) {
+         if (players[playerAddress].chips === 0)
             players[playerAddress].status = 'all-in';
-         }
          break;
       }
 
@@ -303,30 +285,80 @@ export const playerAction = onCall(async (request) => {
          throw new HttpsError('invalid-argument', `Unknown action: ${action}`);
    }
 
-   // Recalculate pot and current bet
-   const pot = Object.values(players).reduce(
-      (sum: number, p: any) => sum + (p.currentBet ?? 0),
-      0,
-   );
+   const pot =
+      Object.values(players).reduce(
+         (sum: number, p: any) => sum + (p.currentBet ?? 0),
+         0,
+      ) + (state.pot || 0);
    const newCurrentBet = Math.max(
       ...Object.values(players).map((p: any) => p.currentBet ?? 0),
    );
 
-   // Find next active player (after action is applied, so folded player is excluded)
-   const activePlayers: any[] = Object.values(players)
+   // Filter for players who haven't folded and aren't eliminated
+   const activeInHand = Object.values(players).filter(
+      (p: any) => p.status === 'active' || p.status === 'all-in',
+   );
+
+   // ─── START SURVIVAL LOGIC ───
+   // ─── START SURVIVAL LOGIC ───
+   if (activeInHand.length === 1) {
+      const handWinner = activeInHand[0] as any; // ✅ Added type assertion
+      const winnerAddress = handWinner.address;
+
+      players[winnerAddress].chips += pot;
+
+      // Reset round bets and check for eliminations
+      Object.keys(players).forEach((addr) => {
+         players[addr].currentBet = 0;
+         if (players[addr].chips <= 0) {
+            players[addr].status = 'eliminated';
+         }
+      });
+
+      const survivors = Object.values(players).filter(
+         (p: any) => p.status !== 'eliminated',
+      );
+
+      const endHandData: any = {
+         players,
+         pot: 0,
+         currentBet: 0,
+         lastUpdated: Date.now(),
+         winners: [
+            {
+               address: winnerAddress,
+               amount: pot,
+               hand: 'Everyone else folded',
+            },
+         ],
+      };
+
+      if (survivors.length === 1) {
+         await db
+            .collection('tournaments')
+            .doc(tournamentId)
+            .update({ status: 'completed' });
+         endHandData.phase = 'finished';
+      } else {
+         endHandData.phase = 'showdown';
+      }
+
+      await gameRef.update(endHandData);
+      return { success: true };
+   }
+   // ─── END SURVIVAL LOGIC ───
+
+   const activeToTalk = Object.values(players)
       .filter((p: any) => p.status === 'active')
       .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
 
-   // Use seatIndex to find next player — handles fold case where current player
-   // is no longer in activePlayers
    const currentSeatIndex = players[playerAddress].seatIndex;
-   const nextPlayer =
-      activePlayers.find((p: any) => p.seatIndex > currentSeatIndex) ??
-      activePlayers[0];
+   const nextPlayer = (activeToTalk.find(
+      (p: any) => p.seatIndex > currentSeatIndex,
+   ) ?? activeToTalk[0]) as any;
 
-   // Fixed: removed || p.status !== 'active' which was always false after filter
-   const allActed = activePlayers.every(
-      (p: any) => p.currentBet === newCurrentBet,
+   const allActed = activeToTalk.every(
+      (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
    );
 
    let updates: any = {
@@ -336,7 +368,7 @@ export const playerAction = onCall(async (request) => {
       lastUpdated: Date.now(),
    };
 
-   if (allActed || activePlayers.length <= 1) {
+   if (allActed) {
       const phaseUpdates = await advancePhase(state, players, pot);
       updates = { ...updates, ...phaseUpdates };
    } else {
@@ -423,6 +455,7 @@ async function determineWinners(
    pot: number,
 ): Promise<Record<string, any>> {
    const gameRef = db.collection('gameState').doc(state.tournamentId);
+   const tournamentRef = db.collection('tournaments').doc(state.tournamentId);
 
    const eligiblePlayers: any[] = Object.values(players).filter(
       (p: any) => p.status === 'active' || p.status === 'all-in',
@@ -440,21 +473,48 @@ async function determineWinners(
       }),
    );
 
-   // Sort by score descending — highest wins
    results.sort((a, b) => b.handResult.score - a.handResult.score);
    const winner = results[0];
 
-   // Award pot
+   // 💰 Award pot
    players[winner.player.address].chips += pot;
 
-   // Eliminate broke players
+   // 💀 Eliminate players with 0 chips
    Object.keys(players).forEach((addr) => {
-      if (players[addr].chips === 0) {
+      if (players[addr].chips <= 0) {
          players[addr].status = 'eliminated';
+         players[addr].holeCards = [];
       }
    });
 
-   // Reveal hands for showdown
+   // 🏆 Check if Tournament is OVER
+   const survivors = Object.values(players).filter(
+      (p) => p.status !== 'eliminated',
+   );
+
+   if (survivors.length === 1) {
+      // TOURNAMENT FINISHED
+      await tournamentRef.update({
+         status: 'completed',
+         winner: survivors[0].address,
+      });
+
+      return {
+         phase: 'finished', // Change phase to finished
+         players,
+         winners: [
+            {
+               address: winner.player.address,
+               amount: pot,
+               hand: winner.handResult.description,
+               isTournamentWinner: true, // Add a flag for the UI
+            },
+         ],
+         lastUpdated: Date.now(),
+      };
+   }
+
+   // 🃏 Otherwise, prepare for Showdown then a New Hand
    const revealedHands: Record<string, Card[]> = {};
    results.forEach((r) => {
       revealedHands[r.player.address] = r.holeCards;
@@ -464,8 +524,6 @@ async function determineWinners(
       phase: 'showdown',
       players,
       pot: 0,
-      currentTurn: null,
-      turnDeadline: null,
       winners: [
          {
             address: winner.player.address,
@@ -619,11 +677,18 @@ export const startGameManually = onCall(
       }
 
       // ── 1. Get ALL registrations ──────────────────────────
+      // Inside startGameManually
       const playersSnap = await db
          .collection('tournaments')
          .doc(tournamentId)
          .collection('registrations')
-         .get();
+         .limit(6)
+         .get(); // Force limit 6
+      // const playersSnap = await db
+      //    .collection('tournaments')
+      //    .doc(tournamentId)
+      //    .collection('registrations')
+      //    .get();
 
       if (playersSnap.docs.length < 2) {
          throw new HttpsError(
