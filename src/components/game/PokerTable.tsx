@@ -179,7 +179,13 @@ function WaitingOverlay({
 }
 
 // ── Showdown Overlay ──────────────────────────────────────
-function ShowdownOverlay({ winners }: { winners: any[] }) {
+function ShowdownOverlay({
+   winners,
+   players,
+}: {
+   winners: any[];
+   players: Record<string, any>;
+}) {
    return (
       <AnimatePresence>
          <motion.div
@@ -198,22 +204,28 @@ function ShowdownOverlay({ winners }: { winners: any[] }) {
                <p className="text-yellow-400 font-black text-2xl mb-4">
                   Winner!
                </p>
-               {winners.map((w) => (
-                  <div
-                     key={w.address}
-                     className="flex flex-col items-center gap-1"
-                  >
-                     <p className="text-white font-mono text-sm opacity-70">
-                        {w.address.slice(0, 6)}...{w.address.slice(-4)}
-                     </p>
-                     <p className="text-yellow-300 font-bold text-sm">
-                        {w.hand}
-                     </p>
-                     <p className="text-emerald-400 font-black text-2xl mt-1">
-                        +{w.amount.toLocaleString()} USDC
-                     </p>
-                  </div>
-               ))}
+               {winners.map((w) => {
+                  const playerData = players[w.address?.toLowerCase()];
+                  const displayName =
+                     playerData?.username ||
+                     `${w.address.slice(0, 6)}...${w.address.slice(-4)}`;
+                  return (
+                     <div
+                        key={w.address}
+                        className="flex flex-col items-center gap-1"
+                     >
+                        <p className="text-white font-mono text-sm opacity-70">
+                           {displayName}
+                        </p>
+                        <p className="text-yellow-300 font-bold text-sm">
+                           {w.hand}
+                        </p>
+                        <p className="text-emerald-400 font-black text-2xl mt-1">
+                           +{w.amount.toLocaleString()} USDC
+                        </p>
+                     </div>
+                  );
+               })}
             </div>
          </motion.div>
       </AnimatePresence>
@@ -471,7 +483,7 @@ export default function PokerTable({ tournamentId }: Props) {
                )}
 
                {myHand.length > 0 && (
-                  <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-3">
+                  <div className="absolute bottom-52 left-1/2 -translate-x-1/2 flex gap-3">
                      {myHand.map((card, i) => (
                         <CardUI key={i} card={card} revealed />
                      ))}
@@ -481,21 +493,37 @@ export default function PokerTable({ tournamentId }: Props) {
                {gameState.winners &&
                   gameState.winners.length > 0 &&
                   gameState.winners[0].amount > 0 && (
-                     <ShowdownOverlay winners={gameState.winners} />
+                     <ShowdownOverlay
+                        winners={gameState.winners}
+                        players={gameState.players}
+                     />
                   )}
             </>
          )}
 
-         {isMyTurn && gameState && gameState.phase !== 'waiting' && (
-            <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto">
-               <ActionPanel
-                  tournamentId={tournamentId}
-                  gameState={gameState}
-                  playerAddress={address?.toLowerCase() ?? ''}
-                  onAction={handleGameAction}
-               />
-            </div>
-         )}
+         {gameState &&
+            gameState.phase !== 'waiting' &&
+            gameState.phase !== 'finished' &&
+            (() => {
+               const myAddress = address?.toLowerCase() ?? '';
+               const me = gameState.players[myAddress];
+               const allInRunout =
+                  !gameState.currentTurn &&
+                  me?.status === 'all-in' &&
+                  gameState.phase !== 'showdown';
+
+               return isMyTurn || allInRunout ? (
+                  <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto">
+                     <ActionPanel
+                        tournamentId={tournamentId}
+                        gameState={gameState}
+                        playerAddress={myAddress}
+                        onAction={handleGameAction}
+                        isAllInRunout={allInRunout}
+                     />
+                  </div>
+               ) : null;
+            })()}
       </div>
    );
 }

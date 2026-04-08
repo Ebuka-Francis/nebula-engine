@@ -382,6 +382,7 @@ export const playerAction = onCall(async (request) => {
    }
 
    // ── Find next player to act ───────────────────────────
+   // Only 'active' players take turns — all-in players are skipped
    const activeToTalk: any[] = Object.values(players)
       .filter((p: any) => p.status === 'active')
       .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
@@ -392,9 +393,13 @@ export const playerAction = onCall(async (request) => {
    ) ?? activeToTalk[0]) as any;
 
    // ── Check if betting round is over ────────────────────
-   const allActed = activeToTalk.every(
-      (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
-   );
+   // Round ends when all active players have acted and matched the current bet
+   // All-in players are excluded — they can't act anymore
+   const allActed =
+      activeToTalk.length === 0 ||
+      activeToTalk.every(
+         (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
+      );
 
    let updates: any = {
       players,
@@ -403,7 +408,7 @@ export const playerAction = onCall(async (request) => {
       lastUpdated: Date.now(),
    };
 
-   if (allActed || activeToTalk.length === 0) {
+   if (allActed) {
       const phaseUpdates = await advancePhase(state, players, pot);
       updates = { ...updates, ...phaseUpdates };
    } else {
@@ -424,10 +429,14 @@ async function advancePhase(
    const deckSnap = await gameRef.get();
    const deck: Card[] = deckSnap.data()?._deck ?? [];
 
-   // Reset bets for new round
+   // Reset bets AND lastAction for every active player entering new street
    Object.keys(players).forEach((addr) => {
-      if (players[addr].status === 'active') {
+      if (
+         players[addr].status === 'active' ||
+         players[addr].status === 'all-in'
+      ) {
          players[addr].currentBet = 0;
+         players[addr].lastAction = null; // ← fixes check stuck bug
       }
    });
 
@@ -435,7 +444,14 @@ async function advancePhase(
       .filter((p: any) => p.status === 'active' || p.status === 'all-in')
       .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
 
-   const firstToAct = activePlayers.find((p: any) => p.status === 'active');
+   // First active (non all-in) player to act, or null if everyone is all-in
+   const firstToAct =
+      activePlayers.find((p: any) => p.status === 'active') ?? null;
+
+   // If everyone is all-in, no one needs to act — set currentTurn to null
+   // The frontend should detect this and auto-advance or just display the cards
+   const currentTurn = firstToAct?.address ?? null;
+   const turnDeadline = currentTurn ? Date.now() + 30000 : null;
 
    switch (state.phase) {
       case 'preflop':
@@ -444,8 +460,8 @@ async function advancePhase(
             communityCards: deck.slice(0, 3),
             _deck: deck.slice(3),
             currentBet: 0,
-            currentTurn: firstToAct?.address ?? null,
-            turnDeadline: Date.now() + 30000,
+            currentTurn,
+            turnDeadline,
             players,
             pot,
          };
@@ -456,8 +472,8 @@ async function advancePhase(
             communityCards: [...(state.communityCards ?? []), deck[0]],
             _deck: deck.slice(1),
             currentBet: 0,
-            currentTurn: firstToAct?.address ?? null,
-            turnDeadline: Date.now() + 30000,
+            currentTurn,
+            turnDeadline,
             players,
             pot,
          };
@@ -468,8 +484,8 @@ async function advancePhase(
             communityCards: [...(state.communityCards ?? []), deck[0]],
             _deck: deck.slice(1),
             currentBet: 0,
-            currentTurn: firstToAct?.address ?? null,
-            turnDeadline: Date.now() + 30000,
+            currentTurn,
+            turnDeadline,
             players,
             pot,
          };

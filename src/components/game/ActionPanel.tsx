@@ -9,42 +9,72 @@ interface Props {
    gameState: GameState;
    playerAddress: string;
    onAction: (type: string, amount?: number) => Promise<void>;
+   isAllInRunout?: boolean; // ← add this
 }
 
 export default function ActionPanel({
    gameState,
    playerAddress,
    onAction,
+   isAllInRunout = false,
 }: Props) {
    const player = gameState.players[playerAddress];
 
-   // Local UI State
    const [raiseAmount, setRaiseAmount] = useState(gameState.bigBlind * 2);
    const [loadingAction, setLoadingAction] = useState<string | null>(null);
    const [showRaiseSlider, setShowRaiseSlider] = useState(false);
 
-   // Game Logic Helpers
    const canCheck = gameState.currentBet === (player?.currentBet ?? 0);
    const callAmount = gameState.currentBet - (player?.currentBet ?? 0);
    const minRaise = gameState.currentBet + gameState.bigBlind;
 
    const handleButtonClick = async (action: string, amount?: number) => {
-      // If user clicks Raise but slider isn't open, just show the slider
       if (action === 'raise' && !showRaiseSlider) {
          setShowRaiseSlider(true);
          return;
       }
-
       setLoadingAction(action);
       try {
          await onAction(action, amount);
-         setShowRaiseSlider(false); // Reset slider on success
+         setShowRaiseSlider(false);
       } catch (err) {
          console.error('Action execution failed:', err);
       } finally {
          setLoadingAction(null);
       }
    };
+
+   // ── All-in runout view — just show which street is coming next ──
+   if (isAllInRunout) {
+      const nextStreet: Record<string, string> = {
+         preflop: 'Flop',
+         flop: 'Turn',
+         turn: 'River',
+         river: 'Showdown',
+      };
+      const label = nextStreet[gameState.phase] ?? 'Next Street';
+
+      return (
+         <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md mx-auto p-4 pb-2"
+         >
+            <div className="bg-black/90 backdrop-blur-xl border border-yellow-500/20 rounded-3xl p-4 shadow-2xl flex flex-col gap-3 items-center">
+               <p className="text-yellow-400 text-xs font-black uppercase tracking-widest">
+                  All-In — Cards Running Out
+               </p>
+               <button
+                  onClick={() => handleButtonClick('check')}
+                  disabled={!!loadingAction}
+                  className="w-full py-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-all disabled:opacity-50"
+               >
+                  {loadingAction ? '...' : `Deal ${label}`}
+               </button>
+            </div>
+         </motion.div>
+      );
+   }
 
    return (
       <motion.div
@@ -53,7 +83,6 @@ export default function ActionPanel({
          className="w-full max-w-md mx-auto p-4 pb-8"
       >
          <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-3xl p-4 shadow-2xl flex flex-col gap-4">
-            {/* ── Conditional Raise Slider ── */}
             <AnimatePresence>
                {showRaiseSlider && (
                   <motion.div
@@ -87,9 +116,7 @@ export default function ActionPanel({
                )}
             </AnimatePresence>
 
-            {/* ── Action Buttons ── */}
             <div className="grid grid-cols-4 gap-2">
-               {/* FOLD */}
                <button
                   onClick={() => handleButtonClick('fold')}
                   disabled={!!loadingAction}
@@ -100,7 +127,6 @@ export default function ActionPanel({
                   </span>
                </button>
 
-               {/* CHECK / CALL */}
                <button
                   onClick={() => handleButtonClick(canCheck ? 'check' : 'call')}
                   disabled={!!loadingAction}
@@ -120,7 +146,6 @@ export default function ActionPanel({
                   )}
                </button>
 
-               {/* RAISE */}
                <button
                   onClick={() => handleButtonClick('raise', raiseAmount)}
                   disabled={!!loadingAction || (player?.chips ?? 0) < minRaise}
@@ -139,7 +164,6 @@ export default function ActionPanel({
                   </span>
                </button>
 
-               {/* ALL-IN */}
                <button
                   onClick={() => handleButtonClick('all-in', player?.chips)}
                   disabled={!!loadingAction}
@@ -154,7 +178,6 @@ export default function ActionPanel({
                </button>
             </div>
 
-            {/* Stack Info */}
             <div className="flex justify-between items-center px-1">
                <div className="flex flex-col">
                   <span className="text-[8px] text-white/20 uppercase font-black">
