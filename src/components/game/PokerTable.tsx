@@ -478,9 +478,11 @@ export default function PokerTable({ tournamentId }: Props) {
                   </div>
                )}
 
-               {gameState.phase === 'showdown' && gameState.winners && (
-                  <ShowdownOverlay winners={gameState.winners} />
-               )}
+               {gameState.winners &&
+                  gameState.winners.length > 0 &&
+                  gameState.winners[0].amount > 0 && (
+                     <ShowdownOverlay winners={gameState.winners} />
+                  )}
             </>
          )}
 

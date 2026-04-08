@@ -223,7 +223,7 @@ export const playerAction = onCall(async (request) => {
       throw new HttpsError('not-found', 'Player not found in game');
    }
 
-   // Apply action
+   // ── Apply action ──────────────────────────────────────
    switch (action as string) {
       case 'fold':
          players[playerAddress].status = 'folded';
@@ -260,12 +260,11 @@ export const playerAction = onCall(async (request) => {
                'Raise must be at least the big blind',
             );
          }
-         const raiseTotal = amount;
-         const raiseMore = raiseTotal - player.currentBet;
+         const raiseMore = amount - player.currentBet;
          if (raiseMore > player.chips)
             throw new HttpsError('invalid-argument', 'Not enough chips');
          players[playerAddress].chips -= raiseMore;
-         players[playerAddress].currentBet = raiseTotal;
+         players[playerAddress].currentBet = amount;
          players[playerAddress].lastAction = 'raise';
          if (players[playerAddress].chips === 0)
             players[playerAddress].status = 'all-in';
@@ -285,31 +284,34 @@ export const playerAction = onCall(async (request) => {
          throw new HttpsError('invalid-argument', `Unknown action: ${action}`);
    }
 
-   const pot =
-      Object.values(players).reduce(
-         (sum: number, p: any) => sum + (p.currentBet ?? 0),
-         0,
-      ) + (state.pot || 0);
+   // ── Recalculate pot ───────────────────────────────────
+   const pot = Object.values(players).reduce(
+      (sum: number, p: any) => sum + (p.currentBet ?? 0),
+      0,
+   );
    const newCurrentBet = Math.max(
       ...Object.values(players).map((p: any) => p.currentBet ?? 0),
    );
 
-   // Filter for players who haven't folded and aren't eliminated
-   const activeInHand = Object.values(players).filter(
+   // ── Players still active in this hand ─────────────────
+   const activeInHand: any[] = Object.values(players).filter(
       (p: any) => p.status === 'active' || p.status === 'all-in',
    );
 
-   // ─── START SURVIVAL LOGIC ───
-   // ─── START SURVIVAL LOGIC ───
+   // ── Everyone folded except one — hand winner ──────────
    if (activeInHand.length === 1) {
-      const handWinner = activeInHand[0] as any; // ✅ Added type assertion
-      const winnerAddress = handWinner.address;
+      const handWinner = activeInHand[0];
 
-      players[winnerAddress].chips += pot;
+      // ✅ Give pot to hand winner
+      players[handWinner.address].chips += pot;
 
-      // Reset round bets and check for eliminations
+      // ✅ Reset bets
       Object.keys(players).forEach((addr) => {
          players[addr].currentBet = 0;
+      });
+
+      // ✅ Eliminate anyone with 0 chips
+      Object.keys(players).forEach((addr) => {
          if (players[addr].chips <= 0) {
             players[addr].status = 'eliminated';
          }
@@ -317,38 +319,70 @@ export const playerAction = onCall(async (request) => {
 
       const survivors = Object.values(players).filter(
          (p: any) => p.status !== 'eliminated',
+      ) as { address: string }[];
+
+      console.log(
+         `Hand won by ${handWinner.address}. Survivors: ${survivors.length}`,
       );
 
-      const endHandData: any = {
+      // ✅ Tournament over — only one player left
+      if (survivors.length === 1) {
+         await db.collection('tournaments').doc(tournamentId).update({
+            status: 'completed',
+            winner: survivors[0].address,
+         });
+
+         await gameRef.update({
+            phase: 'finished',
+            players,
+            pot: 0,
+            currentBet: 0,
+            currentTurn: null,
+            winners: [
+               {
+                  address: handWinner.address,
+                  amount: pot,
+                  hand: 'Everyone else folded',
+                  isTournamentWinner: true,
+               },
+            ],
+            lastUpdated: Date.now(),
+         });
+
+         return { success: true, tournamentOver: true };
+      }
+
+      // ✅ Game continues — show hand result briefly then deal next hand
+      await gameRef.update({
+         phase: 'showdown',
          players,
          pot: 0,
          currentBet: 0,
-         lastUpdated: Date.now(),
+         currentTurn: null,
          winners: [
             {
-               address: winnerAddress,
+               address: handWinner.address,
                amount: pot,
                hand: 'Everyone else folded',
+               isTournamentWinner: false,
             },
          ],
-      };
+         lastUpdated: Date.now(),
+      });
 
-      if (survivors.length === 1) {
-         await db
-            .collection('tournaments')
-            .doc(tournamentId)
-            .update({ status: 'completed' });
-         endHandData.phase = 'finished';
-      } else {
-         endHandData.phase = 'showdown';
-      }
+      // ✅ Wait 4 seconds then deal next hand automatically
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      await dealNewHand(tournamentId, {
+         ...state,
+         players,
+         handNumber: state.handNumber + 1,
+      });
 
-      await gameRef.update(endHandData);
       return { success: true };
    }
-   // ─── END SURVIVAL LOGIC ───
 
-   const activeToTalk = Object.values(players)
+   // ── Find next player to act ───────────────────────────
+   const activeToTalk: any[] = Object.values(players)
       .filter((p: any) => p.status === 'active')
       .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
 
@@ -357,6 +391,7 @@ export const playerAction = onCall(async (request) => {
       (p: any) => p.seatIndex > currentSeatIndex,
    ) ?? activeToTalk[0]) as any;
 
+   // ── Check if betting round is over ────────────────────
    const allActed = activeToTalk.every(
       (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
    );
@@ -368,7 +403,7 @@ export const playerAction = onCall(async (request) => {
       lastUpdated: Date.now(),
    };
 
-   if (allActed) {
+   if (allActed || activeToTalk.length === 0) {
       const phaseUpdates = await advancePhase(state, players, pot);
       updates = { ...updates, ...phaseUpdates };
    } else {
@@ -379,7 +414,6 @@ export const playerAction = onCall(async (request) => {
    await gameRef.update(updates);
    return { success: true };
 });
-
 // ── Advance Phase ─────────────────────────────────────────
 async function advancePhase(
    state: any,
@@ -457,83 +491,109 @@ async function determineWinners(
    const gameRef = db.collection('gameState').doc(state.tournamentId);
    const tournamentRef = db.collection('tournaments').doc(state.tournamentId);
 
-   const eligiblePlayers: any[] = Object.values(players).filter(
+   const eligiblePlayers = Object.values(players).filter(
       (p: any) => p.status === 'active' || p.status === 'all-in',
    );
 
+   // Evaluate all hands
    const results = await Promise.all(
       eligiblePlayers.map(async (player) => {
          const handSnap = await gameRef
             .collection('privateHands')
             .doc(player.address)
             .get();
-         const holeCards: Card[] = handSnap.data()?.holeCards ?? [];
+         const holeCards = handSnap.data()?.holeCards ?? [];
          const handResult = evaluateHand(holeCards, state.communityCards ?? []);
          return { player, holeCards, handResult };
       }),
    );
 
    results.sort((a, b) => b.handResult.score - a.handResult.score);
-   const winner = results[0];
 
-   // 💰 Award pot
-   players[winner.player.address].chips += pot;
+   // ✅ Handle split pots
+   const bestScore = results[0].handResult.score;
+   const winnersList = results.filter((r) => r.handResult.score === bestScore);
+   const sharePerWinner = Math.floor(pot / winnersList.length);
 
-   // 💀 Eliminate players with 0 chips
+   // ✅ Give chips to hand winner(s)
+   winnersList.forEach((w) => {
+      players[w.player.address].chips += sharePerWinner;
+   });
+
+   // ✅ Reset all bets for next hand
+   Object.keys(players).forEach((addr) => {
+      players[addr].currentBet = 0;
+   });
+
+   // ✅ Eliminate players with 0 chips
    Object.keys(players).forEach((addr) => {
       if (players[addr].chips <= 0) {
          players[addr].status = 'eliminated';
-         players[addr].holeCards = [];
       }
    });
 
-   // 🏆 Check if Tournament is OVER
    const survivors = Object.values(players).filter(
-      (p) => p.status !== 'eliminated',
+      (p: any) => p.status !== 'eliminated',
    );
 
+   const revealedHands: Record<string, any> = {};
+   results.forEach((r) => {
+      revealedHands[r.player.address] = r.holeCards;
+   });
+
+   const winnersData = winnersList.map((w) => ({
+      address: w.player.address,
+      amount: sharePerWinner,
+      hand: w.handResult.description,
+      isTournamentWinner: survivors.length === 1,
+   }));
+
+   console.log(
+      `Hand complete. Winners: ${winnersList.length}. Survivors: ${survivors.length}`,
+   );
+
+   // ✅ Tournament over — one player left
    if (survivors.length === 1) {
-      // TOURNAMENT FINISHED
       await tournamentRef.update({
          status: 'completed',
          winner: survivors[0].address,
       });
 
       return {
-         phase: 'finished', // Change phase to finished
+         phase: 'finished',
          players,
-         winners: [
-            {
-               address: winner.player.address,
-               amount: pot,
-               hand: winner.handResult.description,
-               isTournamentWinner: true, // Add a flag for the UI
-            },
-         ],
+         pot: 0,
+         currentBet: 0,
+         currentTurn: null,
+         winners: winnersData,
+         revealedHands,
          lastUpdated: Date.now(),
       };
    }
 
-   // 🃏 Otherwise, prepare for Showdown then a New Hand
-   const revealedHands: Record<string, Card[]> = {};
-   results.forEach((r) => {
-      revealedHands[r.player.address] = r.holeCards;
-   });
-
-   return {
+   // ✅ More players remain — show showdown then auto-deal next hand
+   await gameRef.update({
       phase: 'showdown',
       players,
       pot: 0,
-      winners: [
-         {
-            address: winner.player.address,
-            amount: pot,
-            hand: winner.handResult.description,
-         },
-      ],
+      currentBet: 0,
+      currentTurn: null,
+      winners: winnersData,
       revealedHands,
       lastUpdated: Date.now(),
-   };
+   });
+
+   // ✅ Wait 5 seconds so players can see the result, then deal next hand
+   await new Promise((resolve) => setTimeout(resolve, 5000));
+
+   await dealNewHand(state.tournamentId, {
+      ...state,
+      players,
+      handNumber: state.handNumber + 1,
+   });
+
+   // Return empty since we already updated directly
+   return {};
 }
 
 // ── Auto Turn Timer ───────────────────────────────────────
