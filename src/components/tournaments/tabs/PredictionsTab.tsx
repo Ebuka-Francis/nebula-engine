@@ -21,6 +21,11 @@ import {
 } from 'lucide-react';
 import { Tournament } from '../../../../types';
 import { useAccount } from 'wagmi';
+import { ethers } from 'ethers'; // 1. Import ethers
+
+// 2. Add Base Mainnet Constants
+const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const ORDERBOOK_ADDRESS = '0xe9684C1C4Cda1f4672688469C2518eA606A83120';
 
 interface Registration {
    address: string;
@@ -236,6 +241,48 @@ export default function PredictionsTab({
       patchBet(market.id, { submitting: true, error: '' });
 
       try {
+         // 3. Setup Ethers with Browser Provider
+         const provider = new ethers.BrowserProvider((window as any).ethereum);
+         const signer = await provider.getSigner();
+
+         // 4. Generate Vault ID (Matches backend format)
+         const vaultId = ethers.id(`${tournament.id}-${market.id}`);
+         const amountUnits = ethers.parseUnits(bet.amount, 6); // USDC is 6 decimals
+
+         // 5. STEP 1: APPROVE USDC
+         const usdcContract = new ethers.Contract(
+            USDC_ADDRESS,
+            [
+               'function approve(address spender, uint256 amount) public returns (bool)',
+            ],
+            signer,
+         );
+
+         patchBet(market.id, { error: 'Approving USDC...' });
+         const approveTx = await usdcContract.approve(
+            ORDERBOOK_ADDRESS,
+            amountUnits,
+         );
+         await approveTx.wait();
+
+         // 6. STEP 2: RAIN DEPOSIT
+         const orderbookContract = new ethers.Contract(
+            ORDERBOOK_ADDRESS,
+            [
+               'function deposit(uint256 vaultId, address token, uint256 amount) external',
+            ],
+            signer,
+         );
+
+         patchBet(market.id, { error: 'Placing Prediction on Rain...' });
+         const depositTx = await orderbookContract.deposit(
+            vaultId,
+            USDC_ADDRESS,
+            amountUnits,
+         );
+         const receipt = await depositTx.wait();
+
+         // 7. STEP 3: LOG TO FIREBASE
          const selectedPlayer = players.find(
             (p) => p.address === bet.selectedPlayer,
          );
@@ -252,14 +299,16 @@ export default function PredictionsTab({
                multiplier: market.multiplier,
                potentialPayout: parseFloat(bet.amount) * market.multiplier,
                status: 'pending',
+               txHash: receipt.hash, // Store the hash for verification
                placedAt: serverTimestamp(),
             },
          );
 
-         patchBet(market.id, { submitted: true, submitting: false });
+         patchBet(market.id, { submitted: true, submitting: false, error: '' });
       } catch (err: any) {
+         console.error(err);
          patchBet(market.id, {
-            error: err.message ?? 'Failed to place prediction.',
+            error: err.reason || err.message || 'Transaction failed.',
             submitting: false,
          });
       }
@@ -281,7 +330,7 @@ export default function PredictionsTab({
 
    return (
       <div className="p-5 flex flex-col gap-5">
-         {/* Header */}
+         {/* Header and the rest of your JSX remains exactly the same */}
          <div className="flex items-start justify-between gap-4">
             <div>
                <h3 className="text-white font-bold text-sm">
@@ -303,7 +352,6 @@ export default function PredictionsTab({
             </span>
          </div>
 
-         {/* Empty / loading players */}
          {loadingPlayers ? (
             <div className="flex flex-col gap-3">
                {MARKETS.map((m) => (
@@ -337,7 +385,6 @@ export default function PredictionsTab({
                         className={`rounded-xl border ${market.border} ${market.bg} overflow-hidden`}
                      >
                         <div className="p-4 flex flex-col gap-3">
-                           {/* Market header */}
                            <div className="flex items-center justify-between">
                               <div className="flex flex-col gap-0.5">
                                  <span className="text-white text-sm font-bold flex items-center gap-1.5">
@@ -360,7 +407,6 @@ export default function PredictionsTab({
                               </div>
                            </div>
 
-                           {/* Submitted state */}
                            {bet.submitted ? (
                               <motion.div
                                  initial={{ opacity: 0, scale: 0.95 }}
@@ -373,7 +419,7 @@ export default function PredictionsTab({
                                  />
                                  <div className="flex flex-col">
                                     <span className="text-emerald-400 text-xs font-semibold">
-                                       Prediction placed!
+                                       Prediction placed on-chain!
                                     </span>
                                     <span className="text-white/30 text-[10px]">
                                        {bet.amount} USDC on{' '}
@@ -392,7 +438,6 @@ export default function PredictionsTab({
                               </motion.div>
                            ) : (
                               <>
-                                 {/* Inputs */}
                                  <div className="flex gap-2">
                                     <div className="flex-1 relative">
                                        <PlayerDropdown
@@ -434,7 +479,7 @@ export default function PredictionsTab({
                                                 size={11}
                                                 className="animate-spin"
                                              />
-                                             Placing…
+                                             TX Pending…
                                           </>
                                        ) : (
                                           'Place Bet'
@@ -442,7 +487,6 @@ export default function PredictionsTab({
                                     </motion.button>
                                  </div>
 
-                                 {/* Potential payout preview */}
                                  {bet.amount && parseFloat(bet.amount) > 0 && (
                                     <motion.p
                                        initial={{ opacity: 0, y: -4 }}
@@ -462,7 +506,6 @@ export default function PredictionsTab({
                                     </motion.p>
                                  )}
 
-                                 {/* Error */}
                                  {bet.error && (
                                     <motion.p
                                        initial={{ opacity: 0, y: -4 }}
@@ -480,7 +523,7 @@ export default function PredictionsTab({
                })}
 
                <p className="text-[10px] text-white/20 text-center mt-1">
-                  Predictions powered by Rain Protocol. Payouts are automatic.
+                  Predictions powered by Rain Protocol. Transactions on Base.
                </p>
             </div>
          )}
