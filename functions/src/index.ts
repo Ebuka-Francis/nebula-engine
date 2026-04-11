@@ -4,11 +4,99 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { createDeck, shuffleDeck, Card } from './poker/deck';
 import { evaluateHand } from './poker/handEvaluator';
+import { RaindexClient } from '@rainlanguage/orderbook';
+import { ethers } from 'ethers';
 
 if (!admin.apps.length) {
    admin.initializeApp();
 }
 const db = admin.firestore();
+
+async function settleRainMarket(
+   tournamentId: string,
+   marketId: string,
+   winnerAddress: string,
+) {
+   try {
+      console.log(
+         `🚀 Starting Rain Settlement for tournament: ${tournamentId}, market: ${marketId}`,
+      );
+
+      // 1. Initialize Signer & Provider locally to avoid deployment crashes
+      const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+      const adminSigner = new ethers.Wallet(
+         process.env.RAIN_ADMIN_PK!,
+         provider,
+      );
+
+      // 2. Initialize Raindex Client
+      const clientResult = await RaindexClient.new([
+         `networks:\n  base:\n    rpc: ${process.env.RPC_URL}\n    chain-id: 8453\norderbooks:\n  base:\n    address: ${process.env.ORDERBOOK_ADDRESS}`,
+      ]);
+
+      if (clientResult.error) throw new Error(clientResult.error.readableMsg);
+      const client = clientResult.value;
+
+      // 3. Generate the Vault ID (Must match the one used during market creation)
+      const tournamentVaultHex = ethers.id(
+         `${tournamentId}-${marketId}`,
+      ) as `0x${string}`;
+
+      // 4. Fetch the specific order for this vault
+      const ordersResult = await client.getOrders([8453], {
+         active: true,
+         owners: [adminSigner.address as `0x${string}`],
+      });
+
+      if (ordersResult.error) throw new Error(ordersResult.error.readableMsg);
+
+      const tournamentOrder = (ordersResult.value as any).orders.find(
+         (o: any) =>
+            o.vault_id === tournamentVaultHex ||
+            o.vaultId === tournamentVaultHex,
+      );
+
+      if (!tournamentOrder) {
+         console.log(
+            `⚠️ No Rain order found for vault ${tournamentVaultHex} (${marketId})`,
+         );
+         return;
+      }
+
+      // 5. Generate Calldata to "Take" the order (settle it)
+      // We are sending the payout to the winnerAddress
+      const takeResult = await tournamentOrder.getTakeCalldata(
+         0, // input amount (defined by order logic)
+         0, // output amount (defined by order logic)
+         winnerAddress as `0x${string}`,
+         'buyExact',
+         '1',
+         '999999',
+      );
+
+      if (takeResult.error) throw new Error(takeResult.error.readableMsg);
+
+      const { calldata, data } = takeResult.value as any;
+
+      // 6. Execute the transaction on-chain
+      const tx = await adminSigner.sendTransaction({
+         to: process.env.ORDERBOOK_ADDRESS as `0x${string}`,
+         data: (calldata || data) as `0x${string}`,
+      });
+
+      const receipt = await tx.wait();
+      console.log(
+         `✅ Rain Payout Complete for ${marketId}. Hash: ${receipt?.hash}`,
+      );
+   } catch (error: any) {
+      console.error(
+         `❌ Rain Settlement Error for ${marketId}:`,
+         error.message || error,
+      );
+   }
+}
+
+// Add 'marketId' as a parameter here
 
 // ── Start Game ────────────────────────────────────────────
 export const startGame = onCall(async (request) => {
@@ -101,28 +189,21 @@ async function dealNewHand(tournamentId: string, state: any) {
    let deckIndex = 0;
 
    const players = { ...state.players };
-
-   // ✅ Get ALL active players, not just blinds
    const activePlayers: any[] = Object.values(players).filter(
       (p: any) => p.status !== 'eliminated',
    );
 
-   if (activePlayers.length < 2) {
-      throw new HttpsError('failed-precondition', 'Need at least 2 players');
-   }
+   if (activePlayers.length < 2) return;
 
-   // ── Assign dealer, small blind, big blind ──
-   // Reset all blind/dealer flags first
    activePlayers.forEach((p: any) => {
       players[p.address].isDealer = false;
       players[p.address].isSmallBlind = false;
       players[p.address].isBigBlind = false;
       players[p.address].currentBet = 0;
       players[p.address].lastAction = null;
-      players[p.address].status = 'active';
+      players[p.address].status = 'active'; // Reset all-in players to active for new hand
    });
 
-   // Assign based on seat index
    const sorted = activePlayers.sort(
       (a: any, b: any) => a.seatIndex - b.seatIndex,
    );
@@ -134,55 +215,37 @@ async function dealNewHand(tournamentId: string, state: any) {
    players[sorted[sbIdx].address].isSmallBlind = true;
    players[sorted[bbIdx].address].isBigBlind = true;
 
-   // ── Post blinds ──
    players[sorted[sbIdx].address].chips -= state.smallBlind;
    players[sorted[sbIdx].address].currentBet = state.smallBlind;
-
    players[sorted[bbIdx].address].chips -= state.bigBlind;
    players[sorted[bbIdx].address].currentBet = state.bigBlind;
 
-   // ── Deal 2 hole cards to EVERY active player ──
    const batch = db.batch();
-
    for (const player of activePlayers) {
-      const card1 = deck[deckIndex++];
-      const card2 = deck[deckIndex++];
-
-      // Store privately in subcollection
       const handRef = gameRef.collection('privateHands').doc(player.address);
-
-      batch.set(handRef, { holeCards: [card1, card2] });
+      batch.set(handRef, { holeCards: [deck[deckIndex++], deck[deckIndex++]] });
    }
-
    await batch.commit();
 
-   // Remaining deck for community cards
-   const remainingDeck = deck.slice(deckIndex);
-
-   // First to act is after big blind
    const firstToActIdx = (bbIdx + 1) % sorted.length;
-   const firstToAct = sorted[firstToActIdx];
-
    await gameRef.update({
       phase: 'preflop',
       players,
       communityCards: [],
-      pot: state.smallBlind + state.bigBlind,
+      pot: 0,
       currentBet: state.bigBlind,
-      currentTurn: firstToAct.address,
+      currentTurn: sorted[firstToActIdx].address,
       handNumber: (state.handNumber || 0) + 1,
       turnDeadline: Date.now() + 30000,
       winners: null,
       lastUpdated: Date.now(),
-      _deck: remainingDeck,
+      _deck: deck.slice(deckIndex),
    });
 }
-
 // ── Player Action ─────────────────────────────────────────
 export const playerAction = onCall(async (request) => {
-   if (!request.auth) {
+   if (!request.auth)
       throw new HttpsError('unauthenticated', 'Must be authenticated');
-   }
 
    const {
       tournamentId,
@@ -190,56 +253,28 @@ export const playerAction = onCall(async (request) => {
       amount,
       playerAddress: walletAddress,
    } = request.data;
-
-   if (!walletAddress) {
-      throw new HttpsError('invalid-argument', 'playerAddress is required');
-   }
-   const playerAddress: string = walletAddress.toLowerCase();
-
-   if (!tournamentId || !action) {
-      throw new HttpsError(
-         'invalid-argument',
-         'tournamentId and action are required',
-      );
-   }
-
+   const playerAddress = walletAddress.toLowerCase();
    const gameRef = db.collection('gameState').doc(tournamentId);
-   const gameSnap = await gameRef.get();
+   const tourneyRef = db.collection('tournaments').doc(tournamentId);
 
-   if (!gameSnap.exists) {
-      throw new HttpsError('not-found', 'Game not found');
-   }
+   const gameSnap = await gameRef.get();
+   if (!gameSnap.exists) throw new HttpsError('not-found', 'Game not found');
 
    const state = gameSnap.data()!;
-
-   if (state.currentTurn?.toLowerCase() !== playerAddress) {
-      throw new HttpsError('failed-precondition', 'Not your turn');
-   }
-
    const players = { ...state.players };
    const player = players[playerAddress];
 
-   if (!player) {
-      throw new HttpsError('not-found', 'Player not found in game');
-   }
+   // Ensure tournament shows live if a player is acting
+   await tourneyRef.update({ status: 'live' });
 
-   // ── Apply action ──────────────────────────────────────
-   switch (action as string) {
+   switch (action) {
       case 'fold':
          players[playerAddress].status = 'folded';
          players[playerAddress].lastAction = 'fold';
          break;
-
       case 'check':
-         if (state.currentBet > player.currentBet) {
-            throw new HttpsError(
-               'failed-precondition',
-               'Cannot check — must call or raise',
-            );
-         }
          players[playerAddress].lastAction = 'check';
          break;
-
       case 'call': {
          const callAmount = Math.min(
             state.currentBet - player.currentBet,
@@ -252,17 +287,8 @@ export const playerAction = onCall(async (request) => {
             players[playerAddress].status = 'all-in';
          break;
       }
-
       case 'raise': {
-         if (!amount || amount < state.bigBlind) {
-            throw new HttpsError(
-               'invalid-argument',
-               'Raise must be at least the big blind',
-            );
-         }
          const raiseMore = amount - player.currentBet;
-         if (raiseMore > player.chips)
-            throw new HttpsError('invalid-argument', 'Not enough chips');
          players[playerAddress].chips -= raiseMore;
          players[playerAddress].currentBet = amount;
          players[playerAddress].lastAction = 'raise';
@@ -270,229 +296,141 @@ export const playerAction = onCall(async (request) => {
             players[playerAddress].status = 'all-in';
          break;
       }
-
-      case 'all-in': {
-         const allInAmount = player.chips;
-         players[playerAddress].currentBet += allInAmount;
+      case 'all-in':
+         players[playerAddress].currentBet += player.chips;
          players[playerAddress].chips = 0;
          players[playerAddress].status = 'all-in';
          players[playerAddress].lastAction = 'all-in';
          break;
-      }
-
-      default:
-         throw new HttpsError('invalid-argument', `Unknown action: ${action}`);
    }
 
-   // ── Recalculate pot ───────────────────────────────────
-   const pot = Object.values(players).reduce(
-      (sum: number, p: any) => sum + (p.currentBet ?? 0),
-      0,
-   );
-   const newCurrentBet = Math.max(
-      ...Object.values(players).map((p: any) => p.currentBet ?? 0),
-   );
-
-   // ── Players still active in this hand ─────────────────
-   const activeInHand: any[] = Object.values(players).filter(
+   const activeInHand = Object.values(players).filter(
       (p: any) => p.status === 'active' || p.status === 'all-in',
    );
 
-   // ── Everyone folded except one — hand winner ──────────
+   // Fold Logic (Winner gets table money)
    if (activeInHand.length === 1) {
-      const handWinner = activeInHand[0];
-
-      // ✅ Give pot to hand winner
-      players[handWinner.address].chips += pot;
-
-      // ✅ Reset bets
-      Object.keys(players).forEach((addr) => {
-         players[addr].currentBet = 0;
-      });
-
-      // ✅ Eliminate anyone with 0 chips
-      Object.keys(players).forEach((addr) => {
-         if (players[addr].chips <= 0) {
-            players[addr].status = 'eliminated';
-         }
-      });
-
-      const survivors = Object.values(players).filter(
-         (p: any) => p.status !== 'eliminated',
-      ) as { address: string }[];
-
-      console.log(
-         `Hand won by ${handWinner.address}. Survivors: ${survivors.length}`,
+      const winner = activeInHand[0] as any;
+      const tableMoney = Object.values(players).reduce(
+         (sum: number, p: any) => sum + (p.currentBet ?? 0),
+         0,
       );
+      const totalWon = state.pot + tableMoney;
+      players[winner.address].chips += totalWon;
+      Object.keys(players).forEach((addr) => (players[addr].currentBet = 0));
 
-      // ✅ Tournament over — only one player left
-      if (survivors.length === 1) {
-         await db.collection('tournaments').doc(tournamentId).update({
-            status: 'completed',
-            winner: survivors[0].address,
-         });
-
-         await gameRef.update({
-            phase: 'finished',
-            players,
-            pot: 0,
-            currentBet: 0,
-            currentTurn: null,
-            winners: [
-               {
-                  address: handWinner.address,
-                  amount: pot,
-                  hand: 'Everyone else folded',
-                  isTournamentWinner: true,
-               },
-            ],
-            lastUpdated: Date.now(),
-         });
-
-         return { success: true, tournamentOver: true };
-      }
-
-      // ✅ Game continues — show hand result briefly then deal next hand
       await gameRef.update({
          phase: 'showdown',
          players,
-         pot: 0,
-         currentBet: 0,
-         currentTurn: null,
-         winners: [
-            {
-               address: handWinner.address,
-               amount: pot,
-               hand: 'Everyone else folded',
-               isTournamentWinner: false,
-            },
-         ],
+         winners: [{ address: winner.address, amount: totalWon, hand: 'Fold' }],
+         turnDeadline: null, // Clear timer
          lastUpdated: Date.now(),
       });
 
-      // ✅ Wait 4 seconds then deal next hand automatically
-      await new Promise((resolve) => setTimeout(resolve, 4000));
+      await new Promise((r) => setTimeout(r, 4000));
       await dealNewHand(tournamentId, {
          ...state,
          players,
          handNumber: state.handNumber + 1,
       });
-
       return { success: true };
    }
 
-   // ── Find next player to act ───────────────────────────
-   // Only 'active' players take turns — all-in players are skipped
-   const activeToTalk: any[] = Object.values(players)
-      .filter((p: any) => p.status === 'active')
-      .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
-
-   const currentSeatIndex = players[playerAddress].seatIndex;
-   const nextPlayer = (activeToTalk.find(
-      (p: any) => p.seatIndex > currentSeatIndex,
-   ) ?? activeToTalk[0]) as any;
-
-   // ── Check if betting round is over ────────────────────
-   // Round ends when all active players have acted and matched the current bet
-   // All-in players are excluded — they can't act anymore
-   const allActed =
-      activeToTalk.length === 0 ||
-      activeToTalk.every(
-         (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
-      );
-
-   let updates: any = {
-      players,
-      pot,
-      currentBet: newCurrentBet,
-      lastUpdated: Date.now(),
-   };
+   const newCurrentBet = Math.max(
+      ...Object.values(players).map((p: any) => p.currentBet ?? 0),
+   );
+   const activeToTalk = Object.values(players).filter(
+      (p: any) => p.status === 'active',
+   );
+   const allActed = activeToTalk.every(
+      (p: any) => p.currentBet === newCurrentBet && p.lastAction !== null,
+   );
 
    if (allActed) {
-      const phaseUpdates = await advancePhase(state, players, pot);
-      updates = { ...updates, ...phaseUpdates };
+      const currentPotWithBets =
+         state.pot +
+         Object.values(players).reduce(
+            (sum: number, p: any) => sum + (p.currentBet ?? 0),
+            0,
+         );
+      const phaseUpdates = await advancePhase(
+         state,
+         players,
+         currentPotWithBets,
+      );
+      await gameRef.update({
+         ...phaseUpdates,
+         turnDeadline: Date.now() + 25000,
+         lastUpdated: Date.now(),
+      });
    } else {
-      updates.currentTurn = nextPlayer?.address ?? null;
-      updates.turnDeadline = Date.now() + 30000;
+      const sortedActive = activeToTalk.sort(
+         (a: any, b: any) => a.seatIndex - b.seatIndex,
+      );
+      const next = (sortedActive.find(
+         (p: any) => p.seatIndex > player.seatIndex,
+      ) ?? sortedActive[0]) as any;
+      await gameRef.update({
+         players,
+         currentTurn: next.address,
+         currentBet: newCurrentBet,
+         turnDeadline: Date.now() + 25000, // ✅ Fix: Reset to 25 Seconds
+         lastUpdated: Date.now(),
+      });
    }
-
-   await gameRef.update(updates);
    return { success: true };
 });
 // ── Advance Phase ─────────────────────────────────────────
 async function advancePhase(
    state: any,
    players: Record<string, any>,
-   pot: number,
+   accumulatedPot: number,
 ): Promise<Record<string, any>> {
    const gameRef = db.collection('gameState').doc(state.tournamentId);
-   const deckSnap = await gameRef.get();
-   const deck: Card[] = deckSnap.data()?._deck ?? [];
+   const deck: Card[] = (await gameRef.get()).data()?._deck ?? [];
 
-   // Reset bets AND lastAction for every active player entering new street
+   // Reset current bets for the new street
    Object.keys(players).forEach((addr) => {
-      if (
-         players[addr].status === 'active' ||
-         players[addr].status === 'all-in'
-      ) {
-         players[addr].currentBet = 0;
-         players[addr].lastAction = null; // ← fixes check stuck bug
-      }
+      players[addr].currentBet = 0;
+      players[addr].lastAction = null;
    });
 
-   const activePlayers: any[] = Object.values(players)
-      .filter((p: any) => p.status === 'active' || p.status === 'all-in')
-      .sort((a: any, b: any) => a.seatIndex - b.seatIndex);
-
-   // First active (non all-in) player to act, or null if everyone is all-in
    const firstToAct =
-      activePlayers.find((p: any) => p.status === 'active') ?? null;
+      Object.values(players)
+         .filter((p: any) => p.status === 'active')
+         .sort((a: any, b: any) => a.seatIndex - b.seatIndex)[0] ?? null;
 
-   // If everyone is all-in, no one needs to act — set currentTurn to null
-   // The frontend should detect this and auto-advance or just display the cards
-   const currentTurn = firstToAct?.address ?? null;
-   const turnDeadline = currentTurn ? Date.now() + 30000 : null;
+   const baseUpdate = {
+      players,
+      pot: accumulatedPot,
+      currentTurn: firstToAct?.address ?? null,
+      currentBet: 0,
+   };
 
    switch (state.phase) {
       case 'preflop':
          return {
+            ...baseUpdate,
             phase: 'flop',
             communityCards: deck.slice(0, 3),
             _deck: deck.slice(3),
-            currentBet: 0,
-            currentTurn,
-            turnDeadline,
-            players,
-            pot,
          };
-
       case 'flop':
          return {
+            ...baseUpdate,
             phase: 'turn',
-            communityCards: [...(state.communityCards ?? []), deck[0]],
+            communityCards: [...state.communityCards, deck[0]],
             _deck: deck.slice(1),
-            currentBet: 0,
-            currentTurn,
-            turnDeadline,
-            players,
-            pot,
          };
-
       case 'turn':
          return {
+            ...baseUpdate,
             phase: 'river',
-            communityCards: [...(state.communityCards ?? []), deck[0]],
+            communityCards: [...state.communityCards, deck[0]],
             _deck: deck.slice(1),
-            currentBet: 0,
-            currentTurn,
-            turnDeadline,
-            players,
-            pot,
          };
-
       case 'river':
-         return await determineWinners(state, players, pot);
-
+         return await determineWinners(state, players, accumulatedPot);
       default:
          return {};
    }
@@ -505,110 +443,80 @@ async function determineWinners(
    pot: number,
 ): Promise<Record<string, any>> {
    const gameRef = db.collection('gameState').doc(state.tournamentId);
-   const tournamentRef = db.collection('tournaments').doc(state.tournamentId);
-
-   const eligiblePlayers = Object.values(players).filter(
+   const tourneyRef = db.collection('tournaments').doc(state.tournamentId);
+   const eligible = Object.values(players).filter(
       (p: any) => p.status === 'active' || p.status === 'all-in',
    );
 
-   // Evaluate all hands
    const results = await Promise.all(
-      eligiblePlayers.map(async (player) => {
-         const handSnap = await gameRef
-            .collection('privateHands')
-            .doc(player.address)
-            .get();
-         const holeCards = handSnap.data()?.holeCards ?? [];
-         const handResult = evaluateHand(holeCards, state.communityCards ?? []);
-         return { player, holeCards, handResult };
+      eligible.map(async (p) => {
+         const hand =
+            (
+               await gameRef.collection('privateHands').doc(p.address).get()
+            ).data()?.holeCards ?? [];
+         return {
+            player: p,
+            holeCards: hand,
+            res: evaluateHand(hand, state.communityCards),
+         };
       }),
    );
 
-   results.sort((a, b) => b.handResult.score - a.handResult.score);
+   results.sort((a, b) => b.res.score - a.res.score);
+   const bestScore = results[0].res.score;
+   const winners = results.filter((r) => r.res.score === bestScore);
+   const share = Math.floor(pot / winners.length);
 
-   // ✅ Handle split pots
-   const bestScore = results[0].handResult.score;
-   const winnersList = results.filter((r) => r.handResult.score === bestScore);
-   const sharePerWinner = Math.floor(pot / winnersList.length);
-
-   // ✅ Give chips to hand winner(s)
-   winnersList.forEach((w) => {
-      players[w.player.address].chips += sharePerWinner;
+   winners.forEach((w) => {
+      players[w.player.address].chips += share;
    });
 
-   // ✅ Reset all bets for next hand
    Object.keys(players).forEach((addr) => {
       players[addr].currentBet = 0;
-   });
-
-   // ✅ Eliminate players with 0 chips
-   Object.keys(players).forEach((addr) => {
-      if (players[addr].chips <= 0) {
-         players[addr].status = 'eliminated';
-      }
+      if (players[addr].chips <= 0) players[addr].status = 'eliminated';
    });
 
    const survivors = Object.values(players).filter(
-      (p: any) => p.status !== 'eliminated',
+      (p) => p.status !== 'eliminated',
    );
-
-   const revealedHands: Record<string, any> = {};
-   results.forEach((r) => {
-      revealedHands[r.player.address] = r.holeCards;
-   });
-
-   const winnersData = winnersList.map((w) => ({
+   const winnersData = winners.map((w) => ({
       address: w.player.address,
-      amount: sharePerWinner,
-      hand: w.handResult.description,
-      isTournamentWinner: survivors.length === 1,
+      amount: share,
+      hand: w.res.description,
    }));
 
-   console.log(
-      `Hand complete. Winners: ${winnersList.length}. Survivors: ${survivors.length}`,
-   );
-
-   // ✅ Tournament over — one player left
-   if (survivors.length === 1) {
-      await tournamentRef.update({
-         status: 'completed',
-         winner: survivors[0].address,
-      });
-
-      return {
-         phase: 'finished',
-         players,
-         pot: 0,
-         currentBet: 0,
-         currentTurn: null,
-         winners: winnersData,
-         revealedHands,
-         lastUpdated: Date.now(),
-      };
-   }
-
-   // ✅ More players remain — show showdown then auto-deal next hand
    await gameRef.update({
       phase: 'showdown',
       players,
-      pot: 0,
-      currentBet: 0,
-      currentTurn: null,
       winners: winnersData,
-      revealedHands,
-      lastUpdated: Date.now(),
+      pot: 0,
+      turnDeadline: null,
    });
 
-   // ✅ Wait 5 seconds so players can see the result, then deal next hand
-   await new Promise((resolve) => setTimeout(resolve, 5000));
+   await new Promise((r) => setTimeout(r, 6000)); // Showdown delay
 
-   await dealNewHand(state.tournamentId, {
-      ...state,
-      players,
-      handNumber: state.handNumber + 1,
-   });
+   if (survivors.length > 1) {
+      await dealNewHand(state.tournamentId, {
+         ...state,
+         players,
+         handNumber: state.handNumber + 1,
+      });
+   } else {
+      // ✅ Set status to 'completed' and record winner
+      const finalWinner = survivors[0]?.address ?? 'Unknown';
 
-   // Return empty since we already updated directly
+      await tourneyRef.update({
+         status: 'completed',
+         winner: finalWinner,
+         completedAt: FieldValue.serverTimestamp(),
+      });
+
+      // 🚀 THE FIX: Pass 'first' as the marketId
+      // This matches the ethers.id(`${tournamentId}-first`) we set up
+      await settleRainMarket(state.tournamentId, 'first', finalWinner);
+
+      await gameRef.update({ phase: 'finished', currentTurn: null });
+   }
    return {};
 }
 
