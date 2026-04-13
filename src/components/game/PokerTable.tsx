@@ -12,6 +12,7 @@ import PlayerHUD from './PlayerHUD';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAutoFold } from '@/hooks/useAutoFold';
 import { Loader } from 'lucide-react';
+import { playSound, setGlobalMute } from '@/utils/soundManager';
 
 interface Props {
    tournamentId: string;
@@ -237,6 +238,8 @@ export default function PokerTable({ tournamentId }: Props) {
    const mountRef = useRef<HTMLDivElement>(null);
    const animFrameRef = useRef<number>(0);
    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+   const prevPhase = useRef<string | null>(null);
+   const prevTurn = useRef<string | null>(null);
 
    const firebaseFunctions = getFunctions();
    const startGameFn = httpsCallable(firebaseFunctions, 'startGameManually');
@@ -247,6 +250,7 @@ export default function PokerTable({ tournamentId }: Props) {
    const [isMyTurn, setIsMyTurn] = useState(false);
    const [tournament, setTournament] = useState<any>(null);
    const [loading, setLoading] = useState(false);
+   const [muted, setMuted] = useState(false);
 
    const handleGameAction = useCallback(
       async (type: string, amount: number = 0) => {
@@ -297,6 +301,44 @@ export default function PokerTable({ tournamentId }: Props) {
          setLoading(false);
       }
    };
+
+   useEffect(() => {
+      const handleStorage = () => {
+         setMuted(localStorage.getItem('pokerMute') === 'true');
+      };
+      window.addEventListener('storage', handleStorage);
+      handleStorage(); // Initial check
+      return () => window.removeEventListener('storage', handleStorage);
+   }, []);
+
+   useEffect(() => {
+      if (!gameState) return;
+
+      if (gameState.phase === 'preflop' && prevPhase.current !== 'preflop') {
+         playSound('shuffle');
+      }
+
+      const myAddress = address?.toLowerCase();
+      if (
+         gameState.currentTurn?.toLowerCase() === myAddress &&
+         prevTurn.current?.toLowerCase() !== myAddress
+      ) {
+         playSound('yourTurn');
+      }
+
+      if (
+         gameState.winners &&
+         gameState.winners.length > 0 &&
+         gameState.winners[0].amount > 0 &&
+         prevPhase.current !== 'showdown'
+      ) {
+         playSound('winner');
+      }
+
+      // Update refs
+      prevPhase.current = gameState.phase;
+      prevTurn.current = gameState.currentTurn;
+   }, [gameState, address]);
 
    useEffect(() => {
       if (!tournamentId) return;
@@ -407,6 +449,23 @@ export default function PokerTable({ tournamentId }: Props) {
 
    return (
       <div className="relative w-full h-screen bg-[#0d0d0f] overflow-hidden">
+         <div className="absolute top-4 right-4 z-50">
+            <button
+               onClick={() => {
+                  const nextMuted = !muted;
+                  setGlobalMute(nextMuted);
+                  setMuted(nextMuted); // Manually trigger the local state update
+                  window.dispatchEvent(new Event('storage'));
+               }}
+               className="p-3 rounded-full bg-black/50 border border-white/10 hover:bg-white/10 transition-colors"
+            >
+               <span className="text-white text-xs font-bold">
+                  {localStorage.getItem('pokerMute') === 'true'
+                     ? '🔇 UNMUTE'
+                     : '🔊 MUTE'}
+               </span>
+            </button>
+         </div>
          <div ref={mountRef} className="absolute inset-0" />
 
          {showPreGame && tournament?.startTime && (
