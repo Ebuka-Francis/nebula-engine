@@ -152,7 +152,7 @@ export default function TopNav() {
                />
 
                {/* Only show if connected and no username yet */}
-               {/* {showAvatarButton && (
+               {showAvatarButton && (
                   <button
                      onClick={() => setShowUsernameModal(true)}
                      title="Set Username"
@@ -195,7 +195,7 @@ export default function TopNav() {
                   >
                      <User size={16} color="#a855f7" />
                   </button>
-               )} */}
+               )}
             </div>
 
             {/* Hamburger (mobile only) */}
@@ -303,7 +303,7 @@ export default function TopNav() {
                />
 
                {/* Only show if connected and no username yet */}
-               {/* {showAvatarButton && (
+               {showAvatarButton && (
                   <button
                      onClick={() => {
                         setMenuOpen(false);
@@ -326,7 +326,7 @@ export default function TopNav() {
                   >
                      <User size={16} color="#a855f7" />
                   </button>
-               )} */}
+               )}
             </div>
          </div>
 

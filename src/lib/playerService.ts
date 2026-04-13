@@ -54,21 +54,38 @@ export async function setUsername(
    address: string,
    username: string,
 ): Promise<void> {
-   const normalizedAddress = address.toLowerCase(); // normalize once
-   const playerRef = doc(db, 'players', normalizedAddress); // use lowercase as doc ID
-   await setDoc(
-      playerRef,
-      {
-         address: normalizedAddress,
-         username: username.toLowerCase().trim(),
-         tournamentsWon: 0,
-         tournamentsPlayed: 0,
-         totalEarnings: 0,
-         winRate: 0,
-         joinedAt: serverTimestamp(),
-      },
-      { merge: true },
-   );
+   const normalizedAddress = address.toLowerCase();
+   const playerRef = doc(db, 'players', normalizedAddress);
+   const cleanUsername = username.toLowerCase().trim();
+
+   try {
+      const playerSnap = await getDoc(playerRef);
+
+      if (playerSnap.exists()) {
+         // CASE 1: User already exists.
+         // We ONLY update the username so we don't touch their stats.
+         await updateDoc(playerRef, {
+            username: cleanUsername,
+         });
+         console.log('Username updated successfully.');
+      } else {
+         // CASE 2: New user.
+         // Create the full document with starting stats.
+         await setDoc(playerRef, {
+            address: normalizedAddress,
+            username: cleanUsername,
+            tournamentsWon: 0,
+            tournamentsPlayed: 0,
+            totalEarnings: 0,
+            winRate: 0,
+            joinedAt: serverTimestamp(),
+         });
+         console.log('New player profile created.');
+      }
+   } catch (error) {
+      console.error('Error setting username:', error);
+      throw error;
+   }
 }
 
 export async function createPlayerIfNotExists(address: string): Promise<void> {
