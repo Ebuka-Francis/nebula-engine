@@ -44,10 +44,6 @@ export default function LeaderboardTab({
    const [players, setPlayers] = useState<Registration[]>([]);
    const [loading, setLoading] = useState(true);
 
-
-
- 
-
    useEffect(() => {
       if (!tournament?.id) return;
 
@@ -55,7 +51,7 @@ export default function LeaderboardTab({
 
       // Order by score desc if game has started, otherwise by joinedAt asc
       const q =
-         tournament.status === 'live' || tournament.status === 'ended'
+         tournament.status === 'live' || tournament.status === 'completed'
             ? query(ref, orderBy('score', 'desc'))
             : query(ref, orderBy('joinedAt', 'asc'));
 

@@ -269,93 +269,98 @@ export default function TournamentDetailPage() {
                      </p>
                   </div>
 
-                  {tournament.status !== 'ended' && (
-                     <div className="flex flex-col items-end gap-2 shrink-0">
-                        {/* Creator sees Start Game button */}
-                        {isCreator && (
-                           <motion.button
-                              onClick={handleStartGame}
-                              disabled={
-                                 starting || tournament.currentPlayers < 2
-                              }
-                              whileHover={{
-                                 scale: 1.04,
-                                 boxShadow: '0 0 30px rgba(139,92,246,0.6)',
-                              }}
-                              whileTap={{ scale: 0.97 }}
-                              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                              {starting ? (
-                                 <>
-                                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                                    Starting...
-                                 </>
-                              ) : (
-                                 <>
-                                    <Crown size={15} />
-                                    {tournament.currentPlayers < 2
-                                       ? 'Need 2+ players'
-                                       : 'Start Game'}
-                                 </>
-                              )}
-                           </motion.button>
-                        )}
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                     {/* 1. STATE: TOURNAMENT IS ACTIVE (Upcoming or Live) */}
+                     {tournament.status !== 'completed' && (
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                           {/* CREATOR ACTION: Start Game */}
+                           {isCreator && (
+                              <motion.button
+                                 onClick={handleStartGame}
+                                 disabled={
+                                    starting || tournament.currentPlayers < 2
+                                 }
+                                 whileHover={{
+                                    scale: 1.04,
+                                    boxShadow: '0 0 30px rgba(139,92,246,0.6)',
+                                 }}
+                                 whileTap={{ scale: 0.97 }}
+                                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                 {starting ? (
+                                    <>
+                                       <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                       Starting...
+                                    </>
+                                 ) : (
+                                    <>
+                                       <Crown size={15} />
+                                       {tournament.currentPlayers < 2
+                                          ? 'Need 2+ players'
+                                          : 'Start Game'}
+                                    </>
+                                 )}
+                              </motion.button>
+                           )}
 
-                        {/* ✅ Everyone including creator can join */}
-                        {/* 1. First, check if the tournament is already finished */}
-                        {tournament.status === 'completed' ? (
-                           <div className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/40 text-sm font-semibold italic">
-                              Tournament Closed
-                           </div>
-                        ) : /* 2. If not finished, show the Joined status OR the Join Button */
-                        joined ? (
-                           <div className="flex flex-col items-end gap-1">
-                              <span className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold">
-                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                 Joined
-                              </span>
-                              {!isCreator && (
-                                 <span className="text-white/25 text-[10px]">
-                                    Waiting for host to start...
+                           {/* PLAYER ACTION: Joined vs Join Button */}
+                           {joined ? (
+                              <div className="flex flex-col items-end gap-1">
+                                 <span className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                    Joined
                                  </span>
-                              )}
-                           </div>
-                        ) : (
-                           <motion.button
-                              onClick={handleJoin}
-                              disabled={joining}
-                              whileHover={{
-                                 scale: 1.04,
-                                 boxShadow: '0 0 30px rgba(139,92,246,0.6)',
-                              }}
-                              whileTap={{ scale: 0.97 }}
-                              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                              {joining ? (
-                                 <>
-                                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                                    Joining...
-                                 </>
-                              ) : (
-                                 <>
-                                    <Plus size={15} />
-                                    Join Tournament
-                                 </>
-                              )}
-                           </motion.button>
-                        )}
+                                 {!isCreator && (
+                                    <span className="text-white/25 text-[10px]">
+                                       Waiting for host to start...
+                                    </span>
+                                 )}
+                              </div>
+                           ) : (
+                              <motion.button
+                                 onClick={handleJoin}
+                                 disabled={joining}
+                                 whileHover={{
+                                    scale: 1.04,
+                                    boxShadow: '0 0 30px rgba(139,92,246,0.6)',
+                                 }}
+                                 whileTap={{ scale: 0.97 }}
+                                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold shadow-[0_0_20px_rgba(139,92,246,0.35)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                 {joining ? (
+                                    <>
+                                       <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                       Joining...
+                                    </>
+                                 ) : (
+                                    <>
+                                       <Plus size={15} />
+                                       Join Tournament
+                                    </>
+                                 )}
+                              </motion.button>
+                           )}
 
-                        {joinError && (
-                           <motion.p
-                              initial={{ opacity: 0, y: -4 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="text-red-400 text-[11px] max-w-[200px] text-right"
-                           >
-                              {joinError}
-                           </motion.p>
-                        )}
-                     </div>
-                  )}
+                           {joinError && (
+                              <motion.p
+                                 initial={{ opacity: 0, y: -4 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 className="text-red-400 text-[11px] max-w-[200px] text-right"
+                              >
+                                 {joinError}
+                              </motion.p>
+                           )}
+                        </div>
+                     )}
+
+                     {/* 2. STATE: TOURNAMENT IS FINISHED */}
+                     {tournament.status === 'completed' && (
+                        <div className="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/40 text-sm font-semibold italic flex items-center gap-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                           Tournament Closed
+                        </div>
+                     )}
+                  </div>
                </div>
 
                {/* Stats */}

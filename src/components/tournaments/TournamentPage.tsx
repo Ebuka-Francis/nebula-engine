@@ -253,7 +253,7 @@ export default function TournamentsPage() {
                         variants={cardVariants(i)}
                         whileHover={{ y: -5, transition: { duration: 0.2 } }}
                         className={`group relative flex flex-col gap-4 p-5 rounded-2xl border cursor-pointer transition-colors duration-300 ${
-                           t.status === 'ended'
+                           t.status === 'completed'
                               ? 'border-white/[0.05] bg-white/[0.02] opacity-60'
                               : 'border-white/[0.07] bg-white/[0.03] hover:border-purple-500/40 hover:bg-purple-500/[0.04]'
                         }`}
