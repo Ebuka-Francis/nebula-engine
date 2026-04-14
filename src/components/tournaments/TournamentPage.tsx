@@ -224,7 +224,7 @@ export default function TournamentsPage() {
                animate={{ opacity: 1 }}
                transition={{ delay: 0.3, duration: 0.4 }}
             >
-               {['all', 'live', 'upcoming', 'ended'].map((tab) => (
+               {['all', 'live', 'upcoming', 'completed'].map((tab) => (
                   <button
                      key={tab}
                      onClick={() => setFilter(tab)}

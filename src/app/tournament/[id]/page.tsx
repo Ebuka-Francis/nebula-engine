@@ -302,7 +302,13 @@ export default function TournamentDetailPage() {
                         )}
 
                         {/* ✅ Everyone including creator can join */}
-                        {joined ? (
+                        {/* 1. First, check if the tournament is already finished */}
+                        {tournament.status === 'completed' ? (
+                           <div className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/40 text-sm font-semibold italic">
+                              Tournament Closed
+                           </div>
+                        ) : /* 2. If not finished, show the Joined status OR the Join Button */
+                        joined ? (
                            <div className="flex flex-col items-end gap-1">
                               <span className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-semibold">
                                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -376,12 +382,21 @@ export default function TournamentDetailPage() {
                      {
                         icon: Clock,
                         label: 'Status',
-                        value:
-                           tournament.status === 'live'
-                              ? 'Live Now'
-                              : tournament.status === 'ended'
-                                ? 'Ended'
-                                : 'Upcoming',
+                        value: (() => {
+                           const statusMap: Record<string, string> = {
+                              live: 'Live Now',
+                              ended: 'Ended',
+                              upcoming: 'Upcoming',
+                              completed: 'Completed',
+                           };
+
+                           // Returns the mapped value, or capitalizes the raw status as a fallback
+                           return (
+                              statusMap[tournament.status] ||
+                              tournament.status.charAt(0).toUpperCase() +
+                                 tournament.status.slice(1)
+                           );
+                        })(),
                      },
                   ].map((stat) => (
                      <div

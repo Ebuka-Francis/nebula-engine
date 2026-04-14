@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import { Card } from '@/lib/poker/deck';
 
 // ─── Tournament ───────────────────────────────────────
-export type TournamentStatus = 'live' | 'upcoming' | 'ended';
+export type TournamentStatus = 'live' | 'upcoming' | 'ended' | 'completed';
 
 export interface Tournament {
    id: string;

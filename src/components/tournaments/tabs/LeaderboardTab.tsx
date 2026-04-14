@@ -44,6 +44,10 @@ export default function LeaderboardTab({
    const [players, setPlayers] = useState<Registration[]>([]);
    const [loading, setLoading] = useState(true);
 
+
+
+ 
+
    useEffect(() => {
       if (!tournament?.id) return;
 
