@@ -199,7 +199,7 @@ export default function LiveTournaments() {
               <div className={`absolute -right-10 -bottom-10 w-36 h-36 rounded-full bg-gradient-to-tr ${tournament.imageBg} blur-[40px] opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
 
               {/* Top Row: Title, Buy-in & Icon */}
-              <div className="relative z-10">
+              <div className="relative ">
                 <div className="flex justify-between items-start gap-2">
                   <div>
                     <h3 className="text-white font-bold text-[15px] sm:text-base leading-tight truncate max-w-[190px] sm:max-w-[210px]">
@@ -229,7 +229,7 @@ export default function LiveTournaments() {
               </div>
 
               {/* Bottom Row: Registered Ratio & Prize Pool */}
-              <div className="flex justify-between items-end relative z-10 pt-4 border-t border-white/[0.05]">
+              <div className="flex justify-between items-end relative  pt-4 border-t border-white/[0.05]">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-zinc-500 block tracking-wider">Players</span>
                   <span className="text-zinc-200 font-medium text-[13px]">
