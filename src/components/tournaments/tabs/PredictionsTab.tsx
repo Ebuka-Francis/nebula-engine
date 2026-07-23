@@ -242,7 +242,19 @@ export default function PredictionsTab({
 
       try {
          // 3. Setup Ethers with Browser Provider
-         const provider = new ethers.BrowserProvider((window as any).ethereum);
+         // Provide a narrow type for window.ethereum to avoid `any`
+         type EthereumProvider = {
+            request: (request: {
+               method: string;
+               params?: unknown[] | Record<string, unknown>;
+            }) => Promise<unknown>;
+         };
+         const w = window as unknown as { ethereum?: EthereumProvider };
+         if (!w.ethereum) {
+            patchBet(market.id, { error: 'Ethereum provider not found.' });
+            return;
+         }
+         const provider = new ethers.BrowserProvider(w.ethereum);
          const signer = await provider.getSigner();
 
          // 4. Generate Vault ID (Matches backend format)
@@ -305,17 +317,21 @@ export default function PredictionsTab({
          );
 
          patchBet(market.id, { submitted: true, submitting: false, error: '' });
-      } catch (err: any) {
+      } catch (err: unknown) {
          console.error(err);
+         // Normalize error shape
+         const normalized = (err as { reason?: string; message?: string } ) || {};
+         const errorMessage = normalized.reason || normalized.message || 'Transaction failed.';
+
          patchBet(market.id, {
-            error: err.reason || err.message || 'Transaction failed.',
+            error: errorMessage,
             submitting: false,
          });
       }
    };
 
    // Disabled if tournament has ended
-   const isClosed = tournament.status === 'ended';
+   const isClosed = tournament.status === 'completed';
 
    if (!tournament.sideBetting) {
       return (
